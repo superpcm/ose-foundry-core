@@ -36,9 +36,7 @@
           <label>{{localize 'OSE.items.RollType'}}</label>
           <div class="form-fields">
             <select name="system.rollType">
-              {{#select system.rollType}} {{#each config.roll_type as |t a|}}
-              <option value="{{a}}">{{t}}</option>
-              {{/each}} {{/select}}
+              {{selectOptions config.roll_type selected=system.rollType}}
             </select>
           </div>
         </div>
@@ -70,11 +68,8 @@
           <label>{{localize 'OSE.spells.Save'}}</label>
           <div class="form-fields">
             <select name="system.save">
-              {{#select system.save}}
               <option value=""></option>
-              {{#each config.saves_short as |save a|}}
-              <option value="{{a}}">{{save}}</option>
-              {{/each}} {{/select}}
+              {{selectOptions config.saves_short selected=system.save}}
             </select>
           </div>
         </div>

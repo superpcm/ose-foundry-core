@@ -8,4 +8,4 @@ For a detailed description of changes for releases 1.2.2 and earlier, visit the 
 
 ## Recent Releases
 
-For a detailed description of changes for releases after 1.2.2, please see the [releases](https://github.com/vttred/ose/releases) page of this repository.
+For a detailed description of changes for releases after 1.2.2, please see the [releases](https://github.com/NecroticGnome/ose-foundry-core/releases) page of this repository.

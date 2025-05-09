@@ -17,9 +17,9 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     this.spells = new OseDataModelCharacterSpells(this.spells, this.#spellList);
     this.movement = new OseDataModelCharacterMove(
       this.encumbrance,
-      this.config.movementAuto = false,
+      (this.config.movementAuto = false),
       this.movement.base
-      );
+    );
   }
 
   /**
@@ -34,7 +34,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
   /**
    * Use an empty array for system.languages.value
    * in order to suppress Polyglot errors.
-   * 
+   *
    * @param {OseDataModelMonster} source - Source data to migrate
    */
   static #migrateMonsterLanguages(source) {

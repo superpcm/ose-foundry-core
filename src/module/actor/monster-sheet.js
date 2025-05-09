@@ -63,14 +63,14 @@ export default class OseActorSheetMonster extends OseActorSheet {
 
     // Settings
     data.config.morale = game.settings.get(game.system.id, "morale");
-    monsterData.details.treasure.link = await TextEditor.enrichHTML(
+    monsterData.details.treasure.link = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       monsterData.details.treasure.table,
       { async: true }
     );
     data.isNew = this.actor.isNew();
 
     if (foundry.utils.isNewerVersion(game.version, "10.264")) {
-      data.enrichedBiography = await TextEditor.enrichHTML(
+      data.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
         this.object.system.details.biography,
         { async: true }
       );
@@ -85,7 +85,7 @@ export default class OseActorSheetMonster extends OseActorSheet {
     const choices = CONFIG.OSE.monster_saves;
 
     const templateData = { choices };
-    const dlg = await renderTemplate(
+    const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/dialogs/monster-saves.html`,
       templateData
     );

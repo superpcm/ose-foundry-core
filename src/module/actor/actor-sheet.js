@@ -1,11 +1,11 @@
 /**
  * @file The base class we use for Character and Monster sheets. Shared behavior goes here!
  */
-import skipRollDialogCheck from "../helpers-behaviour";
 import OSE from "../config";
 import OseEntityTweaks from "../dialog/entity-tweaks";
+import skipRollDialogCheck from "../helpers-behaviour";
 
-export default class OseActorSheet extends ActorSheet {
+export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   getData() {
     const data = foundry.utils.deepClone(super.getData().data);
     data.owner = this.actor.isOwner;
@@ -116,7 +116,7 @@ export default class OseActorSheet extends ActorSheet {
       const containedItems = item.system.itemIds;
       const updateData = containedItems.reduce((acc, val) => {
         // Only create update data for items that still exist on the actor
-        if(this.actor.items.get(val))
+        if (this.actor.items.get(val))
           acc.push({ _id: val, "system.containerId": "" });
         return acc;
       }, []);
@@ -397,8 +397,13 @@ export default class OseActorSheet extends ActorSheet {
   /* -------------------------------------------- */
 
   async _chooseItemType(choices = ["weapon", "armor", "shield", "gear"]) {
-    const templateData = { types: choices };
-    const dlg = await renderTemplate(
+    const templateData = {
+      types: choices.reduce((obj, choice) => {
+        obj[choice] = choice;
+        return obj;
+      }, {}),
+    };
+    const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/items/entity-create.html`,
       templateData
     );
@@ -449,7 +454,7 @@ export default class OseActorSheet extends ActorSheet {
       const itemData = createItem(type);
       if (treasure) itemData.system = { treasure: true };
       // when creating a new spell on the character sheet, we need to set the level
-      if (type === "spell") itemData.system = lvl ? { lvl } : {lvl: 1};
+      if (type === "spell") itemData.system = lvl ? { lvl } : { lvl: 1 };
       return this.actor.createEmbeddedDocuments("Item", [itemData], {});
     }
   }

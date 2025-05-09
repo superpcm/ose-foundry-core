@@ -182,7 +182,7 @@ export default class OseCharacterCreator extends FormApplication {
       stats: this.object.stats,
       gold: this.gold,
     };
-    const content = await renderTemplate(
+    const content = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/chat/roll-creation.html`,
       templateData
     );

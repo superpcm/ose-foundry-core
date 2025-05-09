@@ -6,7 +6,7 @@ import OSE from "../config";
 /**
  * Extend the basic ItemSheet with some very simple modifications
  */
-export default class OseItemSheet extends ItemSheet {
+export default class OseItemSheet extends foundry.appv1.sheets.ItemSheet {
   /**
    * Extend and override the default options used by the Simple Item Sheet
    *
@@ -50,7 +50,7 @@ export default class OseItemSheet extends ItemSheet {
       encumbrance: game.settings.get(game.system.id, "encumbranceOption"),
     };
     data.enriched = {
-      description: await TextEditor.enrichHTML(
+      description: await foundry.applications.ux.TextEditor.implementation.enrichHTML(
         this.item.system?.description || "",
         { async: true }
       ),

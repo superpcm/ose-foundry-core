@@ -84,11 +84,11 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     // Prepare owned items
     this._prepareItems(data);
 
-    data.enrichedBiography = await TextEditor.enrichHTML(
+    data.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       this.object.system.details.biography,
       { async: true }
     );
-    data.enrichedNotes = await TextEditor.enrichHTML(
+    data.enrichedNotes = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       this.object.system.details.notes,
       { async: true }
     );
@@ -173,7 +173,7 @@ export default class OseActorSheetCharacter extends OseActorSheet {
 
   async _onShowItemTooltip(event) {
     const templateData = {};
-    const dlg = await renderTemplate(
+    const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/partials/character-item-tooltip.html`,
       templateData
     );

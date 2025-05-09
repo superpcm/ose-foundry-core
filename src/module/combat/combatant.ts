@@ -1,5 +1,6 @@
 export class OSECombatant extends Combatant {
   static INITIATIVE_VALUE_SLOWED = -789;
+
   static INITIATIVE_VALUE_DEFEATED = -790;
 
   // ===========================================================================
@@ -9,10 +10,11 @@ export class OSECombatant extends Combatant {
   get isCasting() {
     return this.getFlag(game.system.id, "prepareSpell");
   }
+
   set isCasting(value) {
     this.setFlag(game.system.id, 'prepareSpell', value)
   }
-  
+
   get isSlow() {
     return this.actor.system.isSlow;
   }
@@ -20,7 +22,7 @@ export class OSECombatant extends Combatant {
   get isDefeated() {
     if (this.defeated)
       return true;
-    
+
     return !this.defeated && (this.actor.system.hp.value === 0)
   }
 
@@ -40,9 +42,55 @@ export class OSECombatant extends Combatant {
     const context = await super.getData(options);
     return foundry.utils.mergeObject(context, {
       slow: this.isSlow,
-      casting: this.isCasting
-    })
+      casting: this.isCasting,
+    });
   }
-  
-}
 
+  /**
+   * Assign this combatant to a group.
+   *
+   * @param {string} group - The name of the group to assign this combatant to.
+   */
+  async assignGroup(group: string) {
+    if (this.group?.name === group) {
+      return;
+    }
+
+    if (!this.combat.groups.find((g) => g.name === group)) {
+      await this.combat.createEmbeddedDocuments(`CombatantGroup`, [{ name: group, initiative: null }]);
+    }
+
+    await this.update({ group: this.combat.groups.find((g) => g.name === group).id });
+  }
+
+  /**
+   * Key for the group to which this combatant should belong, or `null` if it can't be grouped.
+   *
+   * @returns {string}
+   */
+  get groupRaw() {
+    if (this.actor.system.isSlow) {
+      return "slow";
+    }
+
+    const assignedGroup = this.group?.name;
+    if (assignedGroup) {
+      return assignedGroup;
+    }
+
+    if (canvas.tokens) {
+      const token = canvas.tokens.get(this.token.id);
+      const disposition = token.document.disposition;
+      switch (disposition) {
+        case -1:
+          return "red";
+        case 0:
+          return "yellow";
+        case 1:
+          return "green";
+      }
+    }
+
+    return "white";
+  }
+}

@@ -24,12 +24,10 @@ const preloadHandlebarsTemplates = async () => {
     `${OSE.systemPath()}/templates/apps/party-sheet.html`,
     // `${OSE.systemPath()}/templates/apps/party-xp.html`,
     // Combat Tab
-    `${OSE.systemPath()}/templates/sidebar/combat-tracker.hbs`,
-    `${OSE.systemPath()}/templates/sidebar/combat-tracker-combatant-individual.hbs`,
-    `${OSE.systemPath()}/templates/sidebar/combat-tracker-combatant-group.hbs`,
+    `${OSE.systemPath()}/templates/sidebar/combat-tracker-combatant.hbs`,
     `${OSE.systemPath()}/templates/apps/combat-set-groups.hbs`,
   ];
-  return loadTemplates(templatePaths);
+  return foundry.applications.handlebars.loadTemplates(templatePaths);
 };
 
 export default preloadHandlebarsTemplates;

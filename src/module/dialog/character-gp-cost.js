@@ -109,7 +109,7 @@ export default class OseCharacterGpCost extends FormApplication {
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
     const templateData = await this.getData();
-    const content = await renderTemplate(
+    const content = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/chat/inventory-list.html`,
       templateData
     );

@@ -1,9 +1,7 @@
 /**
  * @file Wire up system settings.
  */
-
-import { ApplyDamageOption } from "./config";
-import { EncumbranceOption } from "./config";
+import { ApplyDamageOption, EncumbranceOption } from "./config";
 
 /**
  * Perform setting registration.
@@ -62,9 +60,8 @@ const registerSettings = () => {
     scope: "world",
     type: String,
     config: true,
-    choices: Object.values(CONFIG.OSE.encumbranceOptions)
-    .reduce((obj, enc) => {
-      return {...obj, [enc.type]: enc.localizedLabel}
+    choices: Object.values(CONFIG.OSE.encumbranceOptions).reduce((obj, enc) => {
+      return { ...obj, [enc.type]: enc.localizedLabel };
     }, {}) as SettingConfig<EncumbranceOption>["choices"],
   });
 
@@ -101,10 +98,10 @@ const registerSettings = () => {
     scope: "world",
     type: String,
     config: true,
-    choices:  {
-      selected : game.i18n.localize("OSE.Setting.damageSelected"),
-      targeted : game.i18n.localize("OSE.Setting.damageTarget"),
-      originalTarget : game.i18n.localize("OSE.Setting.damageOriginalTarget"),
+    choices: {
+      selected: game.i18n.localize("OSE.Setting.damageSelected"),
+      targeted: game.i18n.localize("OSE.Setting.damageTarget"),
+      originalTarget: game.i18n.localize("OSE.Setting.damageOriginalTarget"),
     },
   });
   game.settings.register(game.system.id, "invertedCtrlBehavior", {

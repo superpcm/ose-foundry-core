@@ -7,3 +7,5 @@ dist
 .env
 .foundrycache
 foundry.zip
+foundry/
+.idea

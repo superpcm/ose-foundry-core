@@ -164,7 +164,7 @@ This is achieved with a `foundryconfig.json` files in each local version of the 
 }
 ```
 
-`~/vttred/ose/foundryconfig.json`
+`~/NecroticGnome/ose-foundry-core/foundryconfig.json`
 
 ```json
 {
@@ -177,7 +177,7 @@ If you want to have two local versions of your repository, there will be an addi
 
 Note: you will have to provide your own .gitconfig for Windows
 
-[new issue]: https://github.com/vttred/ose/issues/new
+[new issue]: https://github.com/NecroticGnome/ose-foundry-core/issues/new
 [core translation]: https://foundryvtt.com/packages/tag/translation
 [crowdin project]: https://crowdin.com/project/ose
 [crowdin docs for translators]: https://support.crowdin.com/enterprise/getting-started-for-translators/

@@ -33,7 +33,7 @@ const OseDice = {
     }
 
     const roll = new Roll(parts.join("+"), data);
-    await roll.evaluate({allowStrings: true});
+    await roll.evaluate({ allowStrings: true });
 
     // Convert the roll to a chat message and return the roll
     let rollMode = game.settings.get("core", "rollMode");
@@ -57,7 +57,7 @@ const OseDice = {
     return new Promise((resolve) => {
       roll.render().then((r) => {
         templateData.rollOSE = r;
-        renderTemplate(template, templateData).then((content) => {
+        foundry.applications.handlebars.renderTemplate(template, templateData).then((content) => {
           chatData.content = content;
           // Dice So Nice
           if (game.dice3d) {
@@ -69,7 +69,7 @@ const OseDice = {
                 chatData.whisper,
                 chatData.blind
               )
-              .then((displayed) => {
+              .then(() => {
                 if (chatMessage !== false) ChatMessage.create(chatData);
                 resolve(roll);
               });
@@ -215,7 +215,10 @@ const OseDice = {
 
     if (game.settings.get(game.system.id, "ascendingAC")) {
       const attackBonus = 19 - data.roll.thac0;
-      if (this.attackIsSuccess(roll, targetAac, attackBonus) || result.victim == null) {
+      if (
+        this.attackIsSuccess(roll, targetAac, attackBonus) ||
+        result.victim == null
+      ) {
         result.details = game.i18n.format(
           "OSE.messages.AttackAscendingSuccess",
           {
@@ -232,7 +235,10 @@ const OseDice = {
         );
         result.isFailure = true;
       }
-    } else if (this.attackIsSuccess(roll, result.target, targetAc) || result.victim == null) {
+    } else if (
+      this.attackIsSuccess(roll, result.target, targetAc) ||
+      result.victim == null
+    ) {
       // Show result in chat card
       const value = result.target - roll.total;
       result.details = game.i18n.format("OSE.messages.AttackSuccess", {
@@ -331,7 +337,7 @@ const OseDice = {
         templateData.rollOSE = r;
         dmgRoll.render().then((dr) => {
           templateData.rollDamage = dr;
-          renderTemplate(template, templateData).then((content) => {
+          foundry.applications.handlebars.renderTemplate(template, templateData).then((content) => {
             chatData.content = content;
             // 2 Step Dice So Nice
             if (game.dice3d) {
@@ -421,19 +427,18 @@ const OseDice = {
           rolled = true;
           rollData.form = html[0].querySelector("form");
           rollData.parts.push(`${rollData.data.roll.magic}`);
-          rollData.title += ` ${game.i18n.localize("OSE.saves.magic.short")} (${rollData.data.roll.magic
-            })`;
+          rollData.title += ` ${game.i18n.localize("OSE.saves.magic.short")} (${rollData.data.roll.magic})`;
           roll = OseDice.sendRoll(rollData);
         },
       },
       cancel: {
         icon: '<i class="fas fa-times"></i>',
         label: game.i18n.localize("OSE.Cancel"),
-        callback: (html) => { },
+        callback: (html) => {},
       },
     };
 
-    const html = await renderTemplate(template, dialogData);
+    const html = await foundry.applications.handlebars.renderTemplate(template, dialogData);
     let roll;
 
     // Create Dialog window
@@ -500,11 +505,11 @@ const OseDice = {
       cancel: {
         icon: '<i class="fas fa-times"></i>',
         label: game.i18n.localize("OSE.Cancel"),
-        callback: (html) => { },
+        callback: (html) => {},
       },
     };
 
-    const html = await renderTemplate(template, dialogData);
+    const html = await foundry.applications.handlebars.renderTemplate(template, dialogData);
     let roll;
 
     // Create Dialog window

@@ -52,15 +52,19 @@ export default class OseItem extends Item {
 
   async prepareDerivedData() {
     // Rich text description
-    this.system.enrichedDescription = await TextEditor.enrichHTML(
+    this.system.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       this.system.details?.description || this.system.description,
       { async: true }
     );
   }
 
   static chatListeners(html) {
-    html.on("click", ".card-buttons button", this._onChatCardAction.bind(this));
-    html.on("click", ".item-name", this._onChatCardToggleContent.bind(this));
+    html.querySelectorAll(".card-buttons button").forEach((button) => {
+      button.addEventListener("click", this._onChatCardAction.bind(this));
+    });
+    html.querySelectorAll(".item-name").forEach((itemName) => {
+      itemName.addEventListener("click", this._onChatCardToggleContent.bind(this));
+    });
   }
 
   async getChatData(htmlOptions) {
@@ -394,12 +398,12 @@ export default class OseItem extends Item {
 
     // Render the chat card template
     const template = `${OSE.systemPath()}/templates/chat/item-card.html`;
-    const html = await renderTemplate(template, templateData);
+    const html = await foundry.applications.handlebars.renderTemplate(template, templateData);
 
     // Basic chat message data
     const chatData = {
       user: game.user.id,
-      type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+      type: CONST.CHAT_MESSAGE_STYLES.OTHER,
       content: html,
       speaker: {
         actor: this.actor.id,
