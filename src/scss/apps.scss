@@ -462,14 +462,16 @@
 
       .item-entry {
         line-height: 30px;
+        margin: 0 0 6px 0;
 
         .item-header {
           padding: 0;
-          margin: 0 0 8px 0;
+          margin: 0 0 2px 0;
           height: 30px;
 
           .item-image {
             padding: 0;
+            height: 30px;
             flex-basis: 30px;
             flex-grow: 0;
             background-size: contain;
@@ -486,8 +488,25 @@
           padding: 0;
           line-height: normal;
 
-          .tag {
+          .tag-list {
+            margin: 0;
+            overflow: auto;
             list-style: none;
+            padding: 1px;
+            display: flex;
+            flex-wrap: wrap;
+            .tag {
+              background: $colorOlive;
+              border-radius: 5px;
+              color: whitesmoke;
+              padding: 1px 5px;
+              box-shadow: 0 0 3px $colorFaint;
+              margin: 0 2px;
+              i {
+                font-size: 8px;
+                color: $colorFaint;
+              }
+            }
           }
         }
       }
