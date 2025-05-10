@@ -210,7 +210,7 @@ export default class OseActor extends Actor {
   }
 
   rollLoyalty(options = {}) {
-    const label = game.i18n.localize(`OSE.roll.loyalty`);
+    const label = game.i18n.localize(`OSE.loyalty`);
     const rollParts = ["2d6"];
 
     const actorData = this.system;
