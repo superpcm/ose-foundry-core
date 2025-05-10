@@ -33,23 +33,28 @@ export const augmentTable = (table, html) => {
   }
 
   // Hide irrelevant standard fields
-  html.querySelector(".range").style.display = "none"; // We only hide this column because the underlying model requires two fields for the range and throw an error if they are missing
+  const rangeFields = html.querySelectorAll(".range");
+  rangeFields.forEach((el) => {
+    el.style.display = "none";
+  });
   const normalizeResults = html.querySelector("button[data-action=normalizeResults]");
   if (normalizeResults) {
     normalizeResults.remove();
   }
 
-  const chanceHeader = html.querySelector(".table-header .result-weight");
-  chanceHeader.textContent = "Chance (%)";
+  const chanceHeader = html.querySelector("thead .weight");
+  if (chanceHeader) chanceHeader.textContent = "Chance (%)";
 
-  const chanceColumn = html.querySelectorAll(".result-weight");
+  const chanceColumn = html.querySelectorAll(".weight");
   chanceColumn.forEach((col) => {
     col.style.flex = "0 0 75px";
   });
 
   const formula = html.querySelector("input[name=formula]");
-  formula.value = "1d100";
-  formula.disabled = true;
+  if (formula) {
+    formula.value = "1d100";
+    formula.disabled = true;
+  }
 
   // Replace Roll button
   const rollButton = document.createElement("button");
@@ -59,7 +64,7 @@ export const augmentTable = (table, html) => {
     "OSE.table.treasure.roll"
   )}`;
 
-  const footerRoll = html.querySelector(".sheet-footer .roll");
+  const footerRoll = html.querySelector(".form-footer [data-action='drawResult']");
   footerRoll.replaceWith(rollButton);
 
   rollButton.addEventListener("click", (ev) => {
@@ -82,24 +87,24 @@ async function drawTreasure(table, data) {
   if (table.getFlag(game.system.id, "treasure")) {
     table.results.forEach(async (r) => {
       if (await percent(r.weight)) {
-        const text = r.getChatText(r);
+        const text = await r.getHTML();
         data.treasure[r.id] = {
           img: r.img,
           text: await foundry.applications.ux.TextEditor.implementation.enrichHTML(text, { async: true }),
         };
         if (
           r.type === CONST.TABLE_RESULT_TYPES.DOCUMENT &&
-          r.collection === "RollTable"
+          r.documentCollection === "RollTable"
         ) {
-          const embeddedTable = game.tables.get(r.resultId);
+          const embeddedTable = await fromUuid(r.documentUuid);
           await drawTreasure(embeddedTable, data.treasure[r.id]);
         }
       }
     });
   } else {
     const { results } = await table.roll();
-    results.forEach((s) => {
-      data.treasure[s.id] = { img: s.img, text: s.text };
+    results.forEach(async (s) => {
+      data.treasure[s.id] = { img: s.img, text: await s.getHTML() };
     });
   }
   return data;
