@@ -92,9 +92,11 @@ async function drawTreasure(table, data) {
           img: r.img,
           text: await foundry.applications.ux.TextEditor.implementation.enrichHTML(text, { async: true }),
         };
+        const parsedUuid = foundry.utils.parseUuid(r.documentUuid);
+        const documentCollection = parsedUuid?.collection?.metadata?.id ?? parsedUuid?.documentType ?? "";
         if (
           r.type === CONST.TABLE_RESULT_TYPES.DOCUMENT &&
-          r.documentCollection === "RollTable"
+          documentCollection === "RollTable"
         ) {
           const embeddedTable = await fromUuid(r.documentUuid);
           await drawTreasure(embeddedTable, data.treasure[r.id]);
