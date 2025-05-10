@@ -3,6 +3,17 @@ import { OSECombat } from "./combat";
 import { OSECombatant } from "./combatant";
 
 export default class OSECombatTracker extends foundry.applications.sidebar.tabs.CombatTracker {
+
+  /** @inheritDoc */
+  static DEFAULT_OPTIONS = {
+    ...foundry.applications.sidebar.tabs.CombatTracker.DEFAULT_OPTIONS,
+    actions: {
+      ...foundry.applications.sidebar.tabs.CombatTracker.DEFAULT_OPTIONS.actions,
+      casting: OSECombatTracker.#onCombatantControl,
+      retreat: OSECombatTracker.#onCombatantControl,
+    },
+  };
+
   /** @inheritDoc */
   async _prepareTrackerContext(context, options) {
     await super._prepareTrackerContext(context, options);
@@ -15,6 +26,11 @@ export default class OSECombatTracker extends foundry.applications.sidebar.tabs.
       turn.group = combatant.group;
     });
     return context;
+  }
+
+  /** @inheritDoc */
+  static #onCombatantControl(...args) {
+    return this._onCombatantControl(...args);
   }
 
   /**
@@ -33,9 +49,11 @@ export default class OSECombatTracker extends foundry.applications.sidebar.tabs.
     const action = btn.dataset.control || btn.dataset.action;
     switch (action) {
       case "casting":
-        return this.#toggleFlag(combatant as OSECombatant, "prepareSpell");
+        await this.#toggleFlag(combatant as OSECombatant, "prepareSpell");
+        return super._onCombatantControl(event, target);
       case "retreat":
-        return this.#toggleFlag(combatant as OSECombatant, "moveInCombat");
+        await this.#toggleFlag(combatant as OSECombatant, "moveInCombat");
+        return super._onCombatantControl(event, target);
     }
     return super._onCombatantControl(event, target);
   }
@@ -45,7 +63,7 @@ export default class OSECombatTracker extends foundry.applications.sidebar.tabs.
     super._configureRenderOptions(options);
 
     // Replace the tracker template
-    OSECombatTracker.PARTS.tracker.template = `${OSE.systemPath()}/templates/sidebar/combat-tracker-combatant.hbs`;
+    this.constructor.PARTS.tracker.template = `${OSE.systemPath()}/templates/sidebar/combat-tracker-combatant.hbs`;
 
     return options;
   }
@@ -112,7 +130,7 @@ export default class OSECombatTracker extends foundry.applications.sidebar.tabs.
         "fa-solid",
         "fa-dice"
       );
-      reRollButton.dataset.action = "rerollGroups";
+      reRollButton.dataset.action = "smartRerollInitiative";
       reRollButton.dataset.tooltip = game.i18n.localize("OSE.Reroll");
       reRollButton.ariaLabel = game.i18n.localize("OSE.Reroll");
 
@@ -170,7 +188,7 @@ export default class OSECombatTracker extends foundry.applications.sidebar.tabs.
         <div class="group-header flexrow" style="background: linear-gradient(90deg, var(--ose-group-color-${label}, ${label}), transparent)">
           <div class="token-name">
             <strong class="name"><i class="fas fa-dice-d6"></i> ${game.i18n.localize(
-              `OSE.colors.${label}`
+              label === "slow" ? "OSE.items.Slow" : `OSE.colors.${label}`
             )}</strong>
           </div>
           ${initiativeCounter.outerHTML}

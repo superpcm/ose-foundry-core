@@ -54,82 +54,11 @@ export class OSECombat extends foundry.documents.Combat {
     );
   }
 
-  // ===========================================================================
-  // COMBAT LIFECYCLE MANAGEMENT
-  // ===========================================================================
-
-  /** @override */
-  async startCombat() {
-    await super.startCombat();
-    if (this.#rerollBehavior !== "reset") await this.#rollAbsolutelyEveryone();
-    return this;
-  }
-
-  /** @override */
-  async _onEndRound(context: CombatRoundEventContext) {
-    switch (this.#rerollBehavior) {
-      case "reset":
-        await this.resetAll();
-        break;
-      case "reroll":
-        await this.#rollAbsolutelyEveryone();
-        break;
-      case "keep":
-      default:
-        break;
-    }
-    await super._onEndRound(context);
-    await this.activateCombatant(0);
-  }
-
-  /**
-   * Activate the given combatant within the combat.
-   *
-   * @param {number} turn - The turn number of the combatant to activate.
-   */
-  async activateCombatant(turn: number) {
-    if (game.user.isGM) {
-      await game.combat.update({ turn });
-    }
-  }
-
-  /**
-   * Determine which group each combatant should be added to, or if a new group should be created.
-   *
-   * @returns {Map<string, { combatants: OSECombatant[], expanded: boolean }>}
-   */
-  async createGroups() {
-    for (const combatant of this.combatants) {
-      if (combatant.group) continue;
-
-      const key = combatant.groupRaw;
-      if (!key) continue;
-
-      if (!this.groups.find((g) => g.name === key)) {
-        await this.createEmbeddedDocuments(`CombatantGroup`, [
-          { name: key, initiative: null },
-        ]);
-      }
-      const group = this.groups.find((g) => g.name === key);
-      if (!group) continue;
-      await combatant.update({ group: group.id });
-    }
-
-    return this.groups;
-  }
-
-  /**
-   * Prompts to set the combatant groups.
-   */
-  setCombatantGroups() {
-    new OSECombatGroupSelector().render(true, { focus: true });
-  }
-
   /**
    * Reroll initiative for all combatants.
    * If the initiative type is set to "group", reroll initiative for each group.
    */
-  async rerollGroups() {
+  async smartRerollInitiative() {
     if (!this.isGroupInitiative) {
       return this.#rollAbsolutelyEveryone();
     }
@@ -173,5 +102,119 @@ export class OSECombat extends foundry.documents.Combat {
     this.setupTurns();
     await ui.combat.render(true);
     return this;
+  }
+
+  // ===========================================================================
+  // COMBAT LIFECYCLE MANAGEMENT
+  // ===========================================================================
+
+  /** @override */
+  async startCombat() {
+    await super.startCombat();
+    if (this.#rerollBehavior !== "reset") await this.smartRerollInitiative();
+    return this;
+  }
+
+  async resetActions() {
+    for (const combatant of this.combatants) {
+      await combatant.setFlag(game.system.id, "prepareSpell", false);
+      await combatant.setFlag(game.system.id, "moveInCombat", false);
+    }
+  }
+
+  /** @override */
+  async _onEndRound(context: CombatRoundEventContext) {
+    switch (this.#rerollBehavior) {
+      case "reset":
+        await this.resetAll();
+        if (this.isGroupInitiative) {
+          const groupUpdates = this.groups.map((g: CombatantGroup) => ({
+            _id: g.id,
+            initiative: null,
+          }));
+
+          if (groupUpdates.length > 0) {
+            await this.updateEmbeddedDocuments("CombatantGroup", groupUpdates);
+            this.setupTurns();
+            await ui.combat.render(true);
+          }
+        }
+        break;
+      case "reroll":
+        await this.smartRerollInitiative();
+        break;
+      case "keep":
+      default:
+        break;
+    }
+    await super._onEndRound(context);
+    await this.resetActions();
+    await this.activateCombatant(0);
+  }
+
+  /**
+   * Activate the given combatant within the combat.
+   *
+   * @param {number} turn - The turn number of the combatant to activate.
+   */
+  async activateCombatant(turn: number) {
+    if (game.user.isGM) {
+      await game.combat.update({ turn });
+    }
+  }
+
+  /**
+   * Determine which group each combatant should be added to, or if a new group should be created.
+   *
+   * @returns {Map<string, { combatants: OSECombatant[], expanded: boolean }>}
+   */
+  async createGroups() {
+    for (const combatant of this.combatants) {
+      if (combatant.group) continue;
+
+      const key = combatant.groupRaw;
+      if (!key) continue;
+
+      if (!this.groups.find((g) => g.name === key)) {
+        await this.createEmbeddedDocuments("CombatantGroup", [
+          { name: key, initiative: null },
+        ]);
+      }
+      const group = this.groups.find((g) => g.name === key);
+      if (!group) continue;
+      await combatant.update({ group: group.id });
+    }
+
+    return this.groups;
+  }
+
+  /**
+   * Prompts to set the combatant groups.
+   */
+  setCombatantGroups() {
+    new OSECombatGroupSelector().render(true, { focus: true });
+  }
+
+  /** @override */
+  _sortCombatants(a, b) {
+    // First sort by initiative
+    const ia = Number.isNumeric(a.initiative) ? a.initiative : -Infinity;
+    const ib = Number.isNumeric(b.initiative) ? b.initiative : -Infinity;
+    const initiativeDiff = ib - ia;
+
+    if (initiativeDiff !== 0) return initiativeDiff;
+
+    // If initiative is tied, sort by group name if available
+    if (a.group?.name && b.group?.name && a.group?.name !== b.group?.name) {
+      const colorsKeys = Object.keys(OSECombat.GROUPS);
+      const indexA = colorsKeys.indexOf(a.group.name);
+      const indexB = colorsKeys.indexOf(b.group.name);
+
+      const colorDiff = indexA - indexB;
+      if (colorDiff !== 0) return colorDiff;
+    }
+
+    // Fall back to ID comparison
+    return a.id > b.id ? 1 : -1;
   }
 }

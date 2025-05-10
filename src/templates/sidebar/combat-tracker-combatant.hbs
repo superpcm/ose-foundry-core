@@ -15,7 +15,7 @@
             <button type="button"
                     class="inline-control combatant-control icon fas fa-walking move-combat{{#if
                       isRetreating}} active{{/if}}"
-                    data-action="casting"
+                    data-action="retreat"
                     data-tooltip aria-label="{{localize 'OSE.CombatFlag.RetreatFromMeleeDeclared'}}"
                     role="button"
                     data-control="retreat"
@@ -23,7 +23,7 @@
             <button type="button"
                     class="inline-control combatant-control icon fas fa-magic prepare-spell{{#if
                       this.isCasting}} active{{/if}}"
-                    data-action="retreat"
+                    data-action="casting"
                     data-tooltip aria-label="{{localize 'OSE.CombatFlag.SpellDeclared'}}"
                     role="button"
                     data-control="casting"
