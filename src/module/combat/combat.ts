@@ -43,13 +43,23 @@ export class OSECombat extends foundry.documents.Combat {
   // INITIATIVE MANAGEMENT
   // ===========================================================================
 
-  async #rollAbsolutelyEveryone() {
+  /**
+   * Roll initiative for all combatants.
+   *
+   * @param {boolean} excludeAlreadyRolled - If true, exclude combatants that have already rolled initiative.
+   * @private
+   */
+  async #rollAbsolutelyEveryone(excludeAlreadyRolled = false) {
     const formula = this.isGroupInitiative
       ? OSECombat.GROUP_FORMULA
       : OSECombat.FORMULA;
 
     await this.rollInitiative(
-      this.combatants.map((c) => c.id),
+      this.combatants
+        .filter(
+          (c) => !c.defeated && (!excludeAlreadyRolled || c.initiative === null)
+        )
+        .map((c) => c.id),
       { formula }
     );
   }
@@ -57,16 +67,23 @@ export class OSECombat extends foundry.documents.Combat {
   /**
    * Reroll initiative for all combatants.
    * If the initiative type is set to "group", reroll initiative for each group.
+   *
+   * @param {boolean} excludeAlreadyRolled - If true, exclude combatants that have already rolled initiative.
    */
-  async smartRerollInitiative() {
+  async smartRerollInitiative(excludeAlreadyRolled = false) {
     if (!this.isGroupInitiative) {
-      return this.#rollAbsolutelyEveryone();
+      return this.#rollAbsolutelyEveryone(excludeAlreadyRolled);
     }
 
     const updates = [];
     const messages = [];
     for (const group of this.groups) {
-      if (group.members.size === 0) continue;
+      if (
+        group.members.size === 0 ||
+        (excludeAlreadyRolled && group.initiative !== null)
+      ) {
+        continue;
+      }
 
       const roll = new Roll(OSECombat.GROUP_FORMULA);
       await roll.evaluate();
@@ -111,7 +128,7 @@ export class OSECombat extends foundry.documents.Combat {
   /** @override */
   async startCombat() {
     await super.startCombat();
-    if (this.#rerollBehavior !== "reset") await this.smartRerollInitiative();
+    if (this.#rerollBehavior !== "reset") await this.smartRerollInitiative(true);
     return this;
   }
 
