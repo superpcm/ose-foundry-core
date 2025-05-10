@@ -32,6 +32,7 @@ import registerSettings from "./module/settings";
 import { OSECombat } from "./module/combat/combat";
 import OSECombatTracker from "./module/combat/combat-tracker";
 import { OSECombatant } from "./module/combat/combatant";
+import TokenRulerOSE from "./module/actor/token-ruler";
 
 import "./e2e";
 import polyfill from "./module/polyfill";
@@ -70,6 +71,7 @@ Hooks.once("init", async () => {
   };
 
   CONFIG.ui.combat = OSECombatTracker;
+  CONFIG.Token.rulerClass = TokenRulerOSE;
 
   game.ose = {
     rollItemMacro: macros.rollItemMacro,
