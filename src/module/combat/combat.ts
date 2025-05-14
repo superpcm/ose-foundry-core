@@ -145,18 +145,6 @@ export class OSECombat extends foundry.documents.Combat {
     switch (this.#rerollBehavior) {
       case "reset":
         await this.resetAll();
-        if (this.isGroupInitiative) {
-          const groupUpdates = this.groups.map((g: CombatantGroup) => ({
-            _id: g.id,
-            initiative: null,
-          }));
-
-          if (groupUpdates.length > 0) {
-            await this.updateEmbeddedDocuments("CombatantGroup", groupUpdates);
-            this.setupTurns();
-            await ui.combat.render(true);
-          }
-        }
         break;
       case "reroll":
         await this.smartRerollInitiative();
@@ -168,6 +156,24 @@ export class OSECombat extends foundry.documents.Combat {
     await super._onEndRound(context);
     await this.resetActions();
     await this.activateCombatant(0);
+  }
+
+  /** @override */
+  async resetAll(args: object) {
+    await super.resetAll(args);
+
+    if (this.isGroupInitiative) {
+      const groupUpdates = this.groups.map((g: CombatantGroup) => ({
+        _id: g.id,
+        initiative: null,
+      }));
+
+      if (groupUpdates.length > 0) {
+        await this.updateEmbeddedDocuments("CombatantGroup", groupUpdates);
+        this.setupTurns();
+        await ui.combat.render(true);
+      }
+    }
   }
 
   /**
