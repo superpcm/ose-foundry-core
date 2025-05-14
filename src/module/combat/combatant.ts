@@ -12,7 +12,7 @@ export class OSECombatant extends Combatant {
   }
 
   set isCasting(value) {
-    this.setFlag(game.system.id, 'prepareSpell', value)
+    this.setFlag(game.system.id, "prepareSpell", value);
   }
 
   get isSlow() {
@@ -20,10 +20,9 @@ export class OSECombatant extends Combatant {
   }
 
   get isDefeated() {
-    if (this.defeated)
-      return true;
+    if (this.defeated) return true;
 
-    return !this.defeated && (this.actor.system.hp.value === 0)
+    return !this.defeated && this.actor.system.hp.value === 0;
   }
 
   // ===========================================================================
@@ -85,7 +84,7 @@ export class OSECombatant extends Combatant {
         case -1:
           return "red";
         case 0:
-          return "yellow";
+          return "purple";
         case 1:
           return "green";
       }

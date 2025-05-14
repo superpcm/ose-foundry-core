@@ -328,6 +328,8 @@
       .toggle-treasure {
         grid-area: button;
         align-self: end;
+        justify-self: center;
+        width: 30px;
       }
     }
   }
