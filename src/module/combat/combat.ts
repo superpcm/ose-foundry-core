@@ -80,7 +80,8 @@ export class OSECombat extends foundry.documents.Combat {
     for (const group of this.groups) {
       if (
         group.members.size === 0 ||
-        (excludeAlreadyRolled && group.initiative !== null)
+        (excludeAlreadyRolled && group.initiative !== null) ||
+        group.name === "slow"
       ) {
         continue;
       }
