@@ -94,16 +94,14 @@
         .description {
           margin: 2px;
           .editor {
-            .tox .tox-tbtn {
-              height: 24px;
-            }
-            height: 110px;
+            height: 130px;
+            min-height: 130px;
           }
         }
         &.notes {
           margin: 2px;
           .editor {
-            height: 150px;
+            min-height: 160px;
           }
         }
       }
