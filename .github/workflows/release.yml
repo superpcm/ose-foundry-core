@@ -19,7 +19,7 @@ jobs:
 
       # # Caching to improve build speed
       - name: Enable caching for Node.js modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: .npm
           key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
