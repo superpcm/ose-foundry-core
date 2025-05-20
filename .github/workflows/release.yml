@@ -8,57 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Standard required steps for a Node.js package
-      - name: Checkout repository to add to workspace
-        uses: actions/checkout@v2
-
-      - name: Setup Node.js version 16
-        uses: actions/setup-node@v2
+      - name: "Create release"
+        uses: ./.github/actions/build-release
         with:
-          node-version: "16"
-
-      # # Caching to improve build speed
-      - name: Enable caching for Node.js modules
-        uses: actions/cache@v2
-        with:
-          path: .npm
-          key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.OS }}-node-
-            ${{ runner.OS }}-
-
-      # Get dev dependencies for the package, including Gulp and Rollup
-      - name: Install dev dependencies
-        run: npm ci #--cache .npm --prefer-offline --ignore-scripts
-
-      # Create a build using Gulp build script
-      - name: Run Gulp build script
-        run: npm run build
-
-      # Insert "manifest", "download", and "version" for this release into the system.json manifest file
-      # Doing it this way works for forks as well
-      - name: Insert release-specific values in manifest file
-        id: sub_manifest_link_version
-        uses: microsoft/variable-substitution@v1
-        with:
-          files: "system.json"
-        env:
-          id: ose
-          title: "Old-School Essentials"
-          version: ${{github.event.release.tag_name}}
-          url: https://github.com/${{github.repository}}
-          manifest: https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/system.json
-          download: https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/system.zip
-
-      # Replace "ose-dev" with "ose" in all files inside the dist folder
-      - name: Replace 'ose-dev' with 'ose' in dist folder
-        run: |
-          find dist/ -type f -exec sed -i 's/ose-dev/ose/g' {} +
-
-      # Create a zip file with all files required by the module to add to the release
-      - name: Create zip file
-        # Remember to update the below line when there's a change in repository files/directories
-        run: zip -r ./system.zip system.json template.json dist/ assets/ LICENSE.OGL LICENSE.GPL LICENSE.OTHER.OSE_THIRD_PARTY_V1_5 AUTHORS
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
       # Create a release for this specific version
       - name: Update Release with Files
