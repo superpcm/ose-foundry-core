@@ -1,5 +1,8 @@
 .ose.sheet.item {
   .sheet-header {
+    .header-col {
+      flex: 1;
+    }
     h1 {
       input {
         margin: 6px 2%;
