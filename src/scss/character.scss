@@ -101,7 +101,9 @@
         &.notes {
           margin: 2px;
           .editor {
-            min-height: 160px;
+            flex: 1 0 0;
+            min-height: 500px;
+            overflow-y: visible;
           }
         }
       }
