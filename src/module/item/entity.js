@@ -59,11 +59,17 @@ export default class OseItem extends Item {
   }
 
   static chatListeners(html) {
-    html.querySelectorAll(".card-buttons button").forEach((button) => {
-      button.addEventListener("click", this._onChatCardAction.bind(this));
-    });
-    html.querySelectorAll(".item-name").forEach((itemName) => {
-      itemName.addEventListener("click", this._onChatCardToggleContent.bind(this));
+    // Use event delegation for buttons
+    html.addEventListener("click", (event) => {
+      const button = event.target.closest(".card-buttons button");
+      if (button) {
+        OseItem._onChatCardAction(event);
+      }
+
+      const itemName = event.target.closest(".item-name");
+      if (itemName) {
+        OseItem._onChatCardToggleContent(event);
+      }
     });
   }
 
@@ -393,7 +399,10 @@ export default class OseItem extends Item {
       hasSave: this.hasSave,
       config: CONFIG.OSE,
     };
-    templateData.rollFormula = new Roll(templateData.data.roll, templateData).formula;
+    templateData.rollFormula = new Roll(
+      templateData.data.roll,
+      templateData
+    ).formula;
     templateData.data.properties = this.system.autoTags;
 
     // Render the chat card template
@@ -431,7 +440,7 @@ export default class OseItem extends Item {
    */
   static _onChatCardToggleContent(event) {
     event.preventDefault();
-    const header = event.currentTarget;
+    const header = event.target.closest(".item-name");
     const card = header.closest(".chat-card");
     const content = card.querySelector(".card-content");
     if (content.style.display === "none") {
@@ -445,7 +454,7 @@ export default class OseItem extends Item {
     event.preventDefault();
 
     // Extract card data
-    const button = event.currentTarget;
+    const button = event.target.closest(".card-buttons button");
     button.disabled = true;
     const card = button.closest(".chat-card");
     const { messageId } = card.closest(".message").dataset;
