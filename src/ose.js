@@ -196,7 +196,7 @@ Hooks.on("getChatMessageContextOptions", chat.addChatMessageContextOptions);
 Hooks.on("renderChatMessageHTML", chat.addChatMessageButtons);
 Hooks.on("renderRollTableSheet", treasure.augmentTable);
 Hooks.on("updateActor", party.update);
-Hooks.on("renderOSECombatTracker", (app, html) =>
+Hooks.on("renderCombatTracker", (app, html) =>
   app.renderGroups(html instanceof HTMLElement ? html : html[0])
 );
 
