@@ -154,16 +154,15 @@ export default class OSECombatTracker extends foundry.applications.sidebar.tabs.
       );
     }
 
-    const groups = await (this.viewed as unknown as OSECombat).createGroups();
     const list = html.querySelector(".directory-list, .combat-tracker");
-    for (const combatantGroup of groups.values()) {
+    for (const combatantGroup of (this.viewed as unknown as OSECombat).groups.values()) {
       if (!combatantGroup.members?.size) {
         continue;
       }
 
-      const children = list.querySelectorAll(
+      const children = list?.querySelectorAll(
         [...combatantGroup.members.map((c: OSECombatant) => `[data-combatant-id="${c.id}"]`)].join(", ")
-      );
+      ) || [];
       if (children.length === 0) {
         continue;
       }

@@ -48,9 +48,13 @@ export class OSECombatant extends Combatant {
   /**
    * Assign this combatant to a group.
    *
-   * @param {string} group - The name of the group to assign this combatant to.
+   * @param {string} group - The name of the group to assign this combatant to. If empty, the group will be automatically determined.
    */
   async assignGroup(group: string) {
+    if (!group) {
+      group = this.groupRaw;
+    }
+
     if (this.group?.name === group) {
       return;
     }
@@ -77,17 +81,13 @@ export class OSECombatant extends Combatant {
       return assignedGroup;
     }
 
-    if (canvas.tokens) {
-      const token = canvas.tokens.get(this.token.id);
-      const disposition = token.document.disposition;
-      switch (disposition) {
-        case -1:
-          return "red";
-        case 0:
-          return "purple";
-        case 1:
-          return "green";
-      }
+    switch (this.token?.disposition) {
+      case -1:
+        return "red";
+      case 0:
+        return "purple";
+      case 1:
+        return "green";
     }
 
     return "white";

@@ -228,7 +228,7 @@ export class OSECombat extends foundry.documents.Combat {
 
     if (initiativeDiff !== 0) return initiativeDiff;
 
-    // If initiative is tied, sort by group name if available
+    // If still tied, sort by group name if available
     if (a.group?.name && b.group?.name && a.group?.name !== b.group?.name) {
       const colorsKeys = Object.keys(OSECombat.GROUPS);
       const indexA = colorsKeys.indexOf(a.group.name);
@@ -236,6 +236,36 @@ export class OSECombat extends foundry.documents.Combat {
 
       const colorDiff = indexA - indexB;
       if (colorDiff !== 0) return colorDiff;
+    }
+
+    // If still tied, sort by disposition
+    // Higher values of CONST.TOKEN_DISPOSITIONS are sorted first (e.g. Friendly).
+    const dispositionA = a.token?.disposition ?? 0;
+    const dispositionB = b.token?.disposition ?? 0;
+    if (dispositionA !== dispositionB) {
+      // Return negative to prioritize higher disposition values
+      return dispositionB - dispositionA;
+    }
+
+    // If still tied, sort by player ownership and retainer status together
+    // Player-owned combatants come before non-player-owned ones
+    if (a.hasPlayerOwner !== b.hasPlayerOwner) {
+      return a.hasPlayerOwner ? -1 : 1;
+    }
+    if (a.hasPlayerOwner && b.hasPlayerOwner) {
+      // Both are player-owned, sort non-retainers first
+      const isRetainerA = !!a.system?.retainer?.enabled;
+      const isRetainerB = !!b.system?.retainer?.enabled;
+      if (isRetainerA !== isRetainerB) {
+        return isRetainerA ? 1 : -1; // Reverse order for player-owned
+      }
+    } else if (!a.hasPlayerOwner && !b.hasPlayerOwner) {
+      // For non-player owned, sort retainers before non-retainers
+      const isRetainerA = !!a.system?.retainer?.enabled;
+      const isRetainerB = !!b.system?.retainer?.enabled;
+      if (isRetainerA !== isRetainerB) {
+        return isRetainerA ? -1 : 1;
+      }
     }
 
     // Fall back to ID comparison

@@ -199,6 +199,11 @@ Hooks.on("updateActor", party.update);
 Hooks.on("renderCombatTracker", (app, html) =>
   app.renderGroups(html instanceof HTMLElement ? html : html[0])
 );
+/** @param {OSECombatant} combatant */
+Hooks.on("createCombatant", (combatant) => {
+  if (game.settings.get(game.system.id, "initiative") !== "group") return;
+  combatant.assignGroup();
+});
 
 Hooks.on("renderCompendium", renderList.RenderCompendium);
 Hooks.on("activateItemDirectory", renderList.RenderItemDirectory);
