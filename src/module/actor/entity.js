@@ -316,7 +316,7 @@ export default class OseActor extends Actor {
 
     const label = game.i18n.localize(`OSE.roll.hd`);
     const rollParts = [actorData.hp.hd];
-    
+
     if (actorType === "character") {
       rollParts.push(actorData.scores.con.mod * actorData.details.level);
     }
@@ -476,11 +476,11 @@ export default class OseActor extends Actor {
 
     const label = attData.item
       ? game.i18n.format("OSE.roll.attacksWith", {
-        name: attData.item.name,
-      })
+          name: attData.item.name,
+        })
       : game.i18n.format("OSE.roll.attacks", {
-        name: this.name,
-      });
+          name: this.name,
+        });
 
     const dmgParts = removeFalsyElements([
       // Weapon damage roll value

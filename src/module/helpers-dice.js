@@ -410,45 +410,54 @@ const OseDice = {
       return OseDice.sendRoll(rollData);
     }
 
-    const buttons = {
-      ok: {
-        label: game.i18n.localize("OSE.Roll"),
-        icon: '<i class="fas fa-dice-d20"></i>',
-        callback: (html) => {
-          rolled = true;
-          rollData.form = html[0].querySelector("form");
-          roll = OseDice.sendRoll(rollData);
-        },
-      },
-      magic: {
-        label: game.i18n.localize("OSE.saves.magic.short"),
-        icon: '<i class="fas fa-magic"></i>',
-        callback: (html) => {
-          rolled = true;
-          rollData.form = html[0].querySelector("form");
-          rollData.parts.push(`${rollData.data.roll.magic}`);
-          rollData.title += ` ${game.i18n.localize("OSE.saves.magic.short")} (${rollData.data.roll.magic})`;
-          roll = OseDice.sendRoll(rollData);
-        },
-      },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
-        label: game.i18n.localize("OSE.Cancel"),
-        callback: (html) => {},
-      },
-    };
-
-    const html = await foundry.applications.handlebars.renderTemplate(template, dialogData);
     let roll;
+
+    const buttons = [
+      {
+        action: "ok",
+        label: game.i18n.localize("OSE.Roll"),
+        icon: "fas fa-dice-d20",
+        callback: (event, button) => {
+          rolled = true;
+          rollData.form = button.form;
+          roll = OseDice.sendRoll(rollData);
+        },
+      },
+      {
+        action: "magic",
+        label: game.i18n.localize("OSE.saves.magic.short"),
+        icon: "fas fa-magic",
+        callback: (event, button) => {
+          rolled = true;
+          rollData.form = button.form;
+          rollData.parts.push(`${rollData.data.roll.magic}`);
+          rollData.title += ` ${game.i18n.localize("OSE.saves.magic.short")} (${
+            rollData.data.roll.magic
+          })`;
+          roll = OseDice.sendRoll(rollData);
+        },
+      },
+      {
+        action: "cancel",
+        icon: "fas fa-times",
+        label: game.i18n.localize("OSE.Cancel"),
+        callback: () => {},
+      },
+    ];
+
+    const html = await foundry.applications.handlebars.renderTemplate(
+      template,
+      dialogData
+    );
 
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title,
+      new foundry.applications.api.DialogV2({
+        window: { title },
         content: html,
         buttons,
         default: "ok",
-        close: () => {
+        submit: () => {
           resolve(rolled ? roll : false);
         },
       }).render(true);
@@ -490,36 +499,39 @@ const OseDice = {
         : OseDice.sendRoll(rollData);
     }
 
-    const buttons = {
-      ok: {
+    let roll;
+
+    const buttons = [
+      {
+        action: "ok",
         label: game.i18n.localize("OSE.Roll"),
-        icon: '<i class="fas fa-dice-d20"></i>',
-        callback: (html) => {
+        icon: "fas fa-dice-d20",
+        callback: (event, button) => {
           rolled = true;
-          rollData.form = html[0].querySelector("form");
+          rollData.form = button.form;
           roll = ["melee", "missile", "attack"].includes(data.roll.type)
             ? OseDice.sendAttackRoll(rollData)
             : OseDice.sendRoll(rollData);
         },
+        default: true,
       },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
+      {
+        action: "cancel",
+        icon: "fas fa-times",
         label: game.i18n.localize("OSE.Cancel"),
-        callback: (html) => {},
+        callback: () => {},
       },
-    };
+    ];
 
     const html = await foundry.applications.handlebars.renderTemplate(template, dialogData);
-    let roll;
 
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title,
+      new foundry.applications.api.DialogV2({
+        window: { title },
         content: html,
         buttons,
-        default: "ok",
-        close: () => {
+        submit: () => {
           resolve(rolled ? roll : false);
         },
       }).render(true);

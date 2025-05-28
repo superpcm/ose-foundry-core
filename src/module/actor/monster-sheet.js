@@ -4,6 +4,7 @@
 import OSE from "../config";
 import OseActorSheet from "./actor-sheet";
 
+
 /**
  * Extend the basic ActorSheet with some very simple modifications
  */
@@ -90,30 +91,33 @@ export default class OseActorSheetMonster extends OseActorSheet {
       templateData
     );
     // Create Dialog window
-    new Dialog(
-      {
-        title: game.i18n.localize("OSE.dialog.generateSaves"),
-        content: dlg,
-        buttons: {
-          ok: {
-            label: game.i18n.localize("OSE.Ok"),
-            icon: '<i class="fas fa-check"></i>',
-            callback: (html) => {
-              const hd = html.find('input[name="hd"]').val();
-              this.actor.generateSave(hd);
-            },
-          },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
-            label: game.i18n.localize("OSE.Cancel"),
+    return new foundry.applications.api.DialogV2({
+      window: { title: game.i18n.localize("OSE.dialog.generateSaves") },
+      position: {
+        width: 250,
+      },
+      content: dlg,
+      buttons: [
+        {
+          action: "ok",
+          label: game.i18n.localize("OSE.Ok"),
+          icon: "fas fa-check",
+          default: true,
+          callback: (event, button) => {
+            const { hd } = new foundry.applications.ux.FormDataExtended(
+              button.form
+            ).object;
+            this.actor.generateSave(hd.replace(/[^\d+.-]/g, ""));
           },
         },
-        default: "ok",
-      },
-      {
-        width: 250,
-      }
-    ).render(true);
+        {
+          action: "cancel",
+          icon: "fas fa-times",
+          label: game.i18n.localize("OSE.Cancel"),
+          callback: () => {},
+        },
+      ],
+    }).render(true);
   }
 
   async _onDrop(event) {

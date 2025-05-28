@@ -46,7 +46,7 @@ export default class OseActorSheetCharacter extends OseActorSheet {
       treasures: this.actor.system.treasures,
       containers: this.actor.system.containers,
     };
-    data.treasure = this.actor.system.carriedTreasure,
+    data.treasure = this.actor.system.carriedTreasure;
     data.containers = this.actor.system.containers;
     data.abilities = this.actor.system.abilities;
     data.spells = this.actor.system.spells.spellList;
@@ -99,31 +99,32 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     const choices = CONFIG.OSE.languages;
 
     const templateData = { choices };
-    const dlg = await renderTemplate(
+    const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/dialogs/lang-create.html`,
       templateData
     );
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title: "",
+      new foundry.applications.api.DialogV2({
+        window: { title: "" },
         content: dlg,
-        buttons: {
-          ok: {
+        buttons: [
+          {
+            action: "ok",
             label: game.i18n.localize("OSE.Ok"),
-            icon: '<i class="fas fa-check"></i>',
-            callback: (html) => {
-              resolve({
-                choice: html.find('select[name="choice"]').val(),
-              });
+            icon: "fas fa-check",
+            default: true,
+            callback: (event, button, html) => {
+              resolve(new foundry.applications.ux.FormDataExtended(button.form).object);
             },
           },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
+          {
+            action: "cancel",
+            icon: "fas fa-times",
             label: game.i18n.localize("OSE.Cancel"),
+            callback: () => {},
           },
-        },
-        default: "ok",
+        ],
       }).render(true);
     });
   }

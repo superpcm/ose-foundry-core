@@ -409,26 +409,26 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
     );
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title: game.i18n.localize("OSE.dialog.createItem"),
+      new foundry.applications.api.DialogV2({
+        window: { title: game.i18n.localize("OSE.dialog.createItem") },
         content: dlg,
-        buttons: {
-          ok: {
+        buttons: [
+          {
+            action: "ok",
             label: game.i18n.localize("OSE.Ok"),
-            icon: '<i class="fas fa-check"></i>',
-            callback: (html) => {
-              resolve({
-                type: html.find('select[name="type"]').val(),
-                name: html.find('input[name="name"]').val(),
-              });
+            icon: "fas fa-check",
+            default: true,
+            callback: (event, button, html) => {
+              resolve(new foundry.applications.ux.FormDataExtended(button.form).object);
             },
           },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
+          {
+            action: "cancel",
+            icon: "fas fa-times",
             label: game.i18n.localize("OSE.Cancel"),
+            callback: () => {},
           },
-        },
-        default: "ok",
+        ],
       }).render(true);
     });
   }

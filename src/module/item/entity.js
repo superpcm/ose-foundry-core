@@ -117,26 +117,28 @@ export default class OseItem extends Item {
 
     if (itemData.missile && itemData.melee && !isNPC) {
       // Dialog
-      new Dialog({
-        title: "Choose Attack Range",
+      new foundry.applications.api.DialogV2({
+        window: { title: "Choose Attack Range" },
         content: "",
-        buttons: {
-          melee: {
-            icon: '<i class="fas fa-fist-raised"></i>',
-            label: "Melee",
+        buttons: [
+          {
+            action: "melee",
+            icon: "fas fa-fist-raised",
+            label: game.i18n.localize("OSE.Melee"),
+            default: true,
             callback: () => {
               this.actor.targetAttack(rollData, "melee", options);
             },
           },
-          missile: {
-            icon: '<i class="fas fa-bullseye"></i>',
-            label: "Missile",
+          {
+            action: "missile",
+            icon: "fas fa-bullseye",
+            label: game.i18n.localize("OSE.Missile"),
             callback: () => {
               this.actor.targetAttack(rollData, "missile", options);
             },
           },
-        },
-        default: "melee",
+        ],
       }).render(true);
       return true;
     }
