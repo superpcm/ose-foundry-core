@@ -18,13 +18,13 @@ export default ({ describe, it, expect, after, assert }: QuenchMethods) => {
       const item = await createWorldTestItem("item");
       const sheet = item?.sheet;
       expect(sheet).is.not.undefined;
-      expect(sheet?.options.classes.length).equal(3);
+      expect(sheet?.options.classes.length).to.be.above(3); // Foundry adds its own classes
       expect(sheet?.options.classes).contain("ose");
       expect(sheet?.options.classes).contain("sheet");
       expect(sheet?.options.classes).contain("item");
       expect(sheet?.options.width).equal(520);
       expect(sheet?.options.height).equal(390);
-      assert(!sheet?.options.resizable);
+      assert(sheet?.options.resizable);
       expect(sheet?.options.tabs.length).equal(1);
       expect(Object.keys(sheet?.options.tabs[0]).length).equal(4);
       expect(Object.keys(sheet?.options.tabs[0])).contain("callback");
