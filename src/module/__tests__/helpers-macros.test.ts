@@ -14,6 +14,8 @@ import {
   createMockMacro,
   createMockScene,
   createWorldTestItem,
+  getActiveNotifications,
+  objectIsNotification,
   openDialogs,
   waitForInput,
 } from "../../e2e/testUtils";
@@ -28,16 +30,6 @@ const createMockActor = async (type: string, data: object = {}) =>
 
 /* CLEAN UP HELPERS */
 const cleanUpActors = () => cleanUpActorsByKey(key);
-
-/**
- * Checks if an object is a likely to be a Notification since Foundry
- * no longer allows accessing the Notification class values directly.
- * @param obj
- */
-const objectIsNotification = (obj: any): obj is Notification =>
-  typeof obj?.message === "string" &&
-  typeof obj?.type === "string" &&
-  typeof obj?.remove === "function";
 
 export default ({
   describe,
@@ -214,8 +206,9 @@ export default ({
       await game.user?.update({ character: actor?.id });
       await rollItemMacro(`New Actor Test ${type.capitalize()}`);
       await waitForInput();
-      const notifications = Array.from(document.querySelectorAll("#notifications li").values());
-      expect(notifications.map(li => li.textContent.trim())).includes(
+      expect(
+        getActiveNotifications().map((li) => li.textContent.trim())
+      ).includes(
         game.i18n.format("OSE.warn.moreThanOneItemWithName", {
           actorName: actor?.name,
           itemName: `New Actor Test ${type.capitalize()}`,

@@ -47,6 +47,25 @@ export const closeSheets = async () => {
 };
 
 /**
+ * Gets the active notifications from the UI. Needed because Foundry no longer
+ * allows accessing the Notification class values directly.
+ *
+ * @returns {HTMLElement[]} An array of active notification elements.
+ */
+export const getActiveNotifications = () => Array.from(document.querySelectorAll("#notifications li").values());
+
+/**
+ * Checks if an object is a likely to be a Notification since Foundry
+ * no longer allows accessing the Notification class values directly.
+ *
+ * @param obj
+ */
+export const objectIsNotification = (obj: any): obj is Notification =>
+  typeof obj?.message === "string" &&
+  typeof obj?.type === "string" &&
+  typeof obj?.remove === "function";
+
+/**
  * Returns the random number required to roll a specific number on a die.
  * This function is used to replace the `CONFIG.Dice.randomUniform` function as
  * it is then fed into the `randomFace` function of a DiceTerm.
