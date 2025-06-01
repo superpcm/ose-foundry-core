@@ -30,7 +30,7 @@ export const addControl = (object) => {
 export const update = (actor) => {
   const partyFlag = actor.getFlag(game.system.id, "party");
 
-  if (partyFlag === null) {
+  if (!partyFlag) {
     return;
   }
 
