@@ -30,11 +30,20 @@ export const openWindows = (className: string) =>
   );
 
 export const openDialogs = () =>
+  Object.values(ui.windows).filter((o) => o.options.classes.includes("dialog"));
+
+export const openV2Dialogs = () =>
   Array.from(foundry.applications.instances.values())
     .filter((o) => o.options.classes.includes("dialog"));
 
 export const closeDialogs = async () => {
   for (const o of openDialogs()) {
+    await o.close();
+  }
+};
+
+export const closeV2Dialogs = async () => {
+  for (const o of openV2Dialogs()) {
     await o.close();
   }
 };
@@ -52,7 +61,7 @@ export const closeSheets = async () => {
  *
  * @returns {HTMLElement[]} An array of active notification elements.
  */
-export const getActiveNotifications = () => Array.from(document.querySelectorAll("#notifications li").values());
+export const getActiveNotifications = (): HTMLElement[] => Array.from(document.querySelectorAll("#notifications li").values() as unknown as HTMLElement[]);
 
 /**
  * Checks if an object is a likely to be a Notification since Foundry

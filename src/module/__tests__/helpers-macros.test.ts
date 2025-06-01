@@ -9,6 +9,7 @@ import {
   cleanUpScenes,
   cleanUpWorldItems,
   closeDialogs,
+  closeV2Dialogs,
   createActorTestItem,
   createMockActorKey,
   createMockMacro,
@@ -16,7 +17,7 @@ import {
   createWorldTestItem,
   getActiveNotifications,
   objectIsNotification,
-  openDialogs,
+  openV2Dialogs,
   waitForInput,
 } from "../../e2e/testUtils";
 import { createOseMacro, rollItemMacro } from "../helpers-macros";
@@ -45,7 +46,7 @@ export default ({
   });
 
   afterEach(async () => {
-    await closeDialogs();
+    await closeV2Dialogs();
     await cleanUpMacros();
     await cleanUpActors();
     await cleanUpWorldItems();
@@ -55,6 +56,7 @@ export default ({
 
   after(async () => {
     await closeDialogs();
+    await closeV2Dialogs();
     await cleanUpMacros();
     await cleanUpActors();
     await cleanUpWorldItems();
@@ -190,8 +192,8 @@ export default ({
       expect(ChatMessage.getSpeaker().actor).is.not.null;
       await rollItemMacro(`New Actor Test ${type.capitalize()}`);
       await waitForInput();
-      expect(openDialogs().length).equal(1);
-      await closeDialogs();
+      expect(openV2Dialogs().length).equal(1);
+      await closeV2Dialogs();
       await actor?.delete();
       await scene?.delete();
     });
@@ -207,7 +209,7 @@ export default ({
       await rollItemMacro(`New Actor Test ${type.capitalize()}`);
       await waitForInput();
       expect(
-        getActiveNotifications().map((li) => li.textContent.trim())
+        getActiveNotifications().map((li) => li?.textContent?.trim())
       ).includes(
         game.i18n.format("OSE.warn.moreThanOneItemWithName", {
           actorName: actor?.name,
@@ -215,8 +217,8 @@ export default ({
         })
       );
       await waitForInput();
-      expect(openDialogs().length).equal(1);
-      await closeDialogs();
+      expect(openV2Dialogs().length).equal(1);
+      await closeV2Dialogs();
       await actor?.delete();
       await scene?.delete();
     });

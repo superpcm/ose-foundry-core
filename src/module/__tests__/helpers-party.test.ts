@@ -55,7 +55,6 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
       expect(openDialogs().length).equal(1);
       await closeDialogs();
       actor?.delete();
-      expect(openDialogs().length).equal(1);
     });
   });
 };

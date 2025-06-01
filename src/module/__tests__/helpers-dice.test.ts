@@ -4,9 +4,8 @@
 // eslint-disable-next-line prettier/prettier, import/no-cycle
 import { QuenchMethods } from "../../e2e";
 import {
-  closeDialogs,
+  closeV2Dialogs,
   getActiveNotifications,
-  objectIsNotification,
   trashChat,
   waitForInput
 } from "../../e2e/testUtils";
@@ -543,7 +542,9 @@ export default ({
       rollData.data.roll.dmg = [];
       await OseDice.sendAttackRoll(rollData);
       await waitForInput();
-      expect(getActiveNotifications().map((li) => li.textContent.trim())).includes(
+      expect(
+        getActiveNotifications().map((li) => li?.textContent?.trim())
+      ).includes(
         "Attack has no damage dice terms; be sure to set the attack's damage"
       );
     });
@@ -594,13 +595,13 @@ export default ({
         expect(dialog?.querySelector("button[data-action='ok']")).not.null;
         expect(dialog?.querySelector("button[data-action='magic']")).not.null;
         expect(dialog?.querySelector("button[data-action='cancel']")).not.null;
-        await closeDialogs();
+        await closeV2Dialogs();
       });
     });
 
     afterEach(async () => {
       await trashChat();
-      await closeDialogs();
+      await closeV2Dialogs();
     });
   });
 
@@ -630,13 +631,13 @@ export default ({
         expect(dialog?.querySelector("button[data-action='ok']")).not.null;
         expect(dialog?.querySelector("button[data-action='magic']")).is.null;
         expect(dialog?.querySelector("button[data-action='cancel']")).not.null;
-        await closeDialogs();
+        await closeV2Dialogs();
       });
     });
 
     afterEach(async () => {
       await trashChat();
-      await closeDialogs();
+      await closeV2Dialogs();
       await waitForInput();
     });
   });
