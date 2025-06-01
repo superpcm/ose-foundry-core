@@ -44,6 +44,20 @@ export const closeSheets = async () => {
 };
 
 /**
+ * Returns the random number required to roll a specific number on a die.
+ * This function is used to replace the `CONFIG.Dice.randomUniform` function as
+ * it is then fed into the `randomFace` function of a DiceTerm.
+ *
+ * @param {number} requiredResult - The specific number you want to roll (e.g. 3 for rolling a 3 on a d6).
+ * @param {number} diceFaces - The number of faces on the dice. (e.g. 6 for a d6)
+ */
+export const rollSpecificNumber = (requiredResult: number, diceFaces: number) {
+  // We are turning the value which will become the randomUniform value
+  // Math.ceil((1 - randomUniform) * this.faces)
+  return 1 - requiredResult / diceFaces;
+}
+
+/**
  * MOCKING HELPERS
  */
 

@@ -85,7 +85,7 @@ async function drawTreasure(table, data) {
   };
   data.treasure = {};
   if (table.getFlag(game.system.id, "treasure")) {
-    table.results.forEach(async (r) => {
+    for (const r of table.results) {
       if (await percent(r.weight)) {
         const text = await r.getHTML();
         data.treasure[r.id] = {
@@ -102,12 +102,12 @@ async function drawTreasure(table, data) {
           await drawTreasure(embeddedTable, data.treasure[r.id]);
         }
       }
-    });
+    };
   } else {
     const { results } = await table.roll();
-    results.forEach(async (s) => {
+    for (const s of results) {
       data.treasure[s.id] = { img: s.img, text: await s.getHTML() };
-    });
+    };
   }
   return data;
 }
