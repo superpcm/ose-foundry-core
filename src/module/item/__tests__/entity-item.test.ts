@@ -5,11 +5,12 @@
 import { QuenchMethods } from "../../../e2e";
 import {
   cleanUpWorldItems,
-  closeDialogs,
+  closeV2Dialogs,
   createActorTestItem,
   createMockActorKey,
   createWorldTestItem,
-  openDialogs,
+  getActiveNotifications,
+  openV2Dialogs,
   trashChat,
   waitForInput,
 } from "../../../e2e/testUtils";
@@ -86,23 +87,36 @@ export default ({
     });
 
     // Requires chai-as-promised
-    /*
-    it('Can\'t create without name', async () => {
-      await expect(OseItem.create({type: 'container'})).to.be.rejectedWith(
-        Error, 
-        "[OseItem.name] may not be a blank string")
-    })
-    it('Can\'t create without type', async () => {
-      await expect(OseItem.create({name: 'Test Item'})).to.be.rejectedWith(
-        Error, 
-        "[OseItem.type] may not be a blank string")
-    })
-    it('Can\'t create without acceptable type', async () => {
-      await expect(OseItem.create({name: 'Test Item', type: 'TEST'})).to.be.rejectedWith(
-        Error, 
-        "[OseItem.type] TEST is not a valid choice")
-    }) 
-    */
+    it("Can't create without name", async () => {
+      const item = await OseItem.create({ type: "container" });
+      await expect(item).is.undefined;
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          'OseItem validation errors:\n  name: may not be undefined'
+        );
+      await ui.notifications?.clear();
+    });
+    it("Can't create without type", async () => {
+      const item = await OseItem.create({ name: "Test Item" });
+      await expect(item).is.undefined;
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          'OseItem validation errors:\n  type: may not be undefined'
+        );
+      await ui.notifications?.clear();
+    });
+    it("Can't create without acceptable type", async () => {
+      const item = await OseItem.create({ name: "Test Item", type: "TEST" });
+      await expect(item).is.undefined;
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          'OseItem validation errors:\n  type: "TEST" is not a valid type for the Item Document class'
+        );
+      await ui.notifications?.clear();
+    });
   });
 
   // @todo: How to test?
@@ -110,7 +124,7 @@ export default ({
 
   describe("prepareDerivedData()", () => {
     it("has the expected fields", async () => {
-      const item = (await createWorldTestItem(type)) as OseItem;
+      const item = (await createWorldTestItem("weapon")) as OseItem;
       expect(item?.system.enrichedDescription).not.undefined;
       await item?.delete();
     });
@@ -139,13 +153,13 @@ export default ({
       const result = weapon.rollWeapon();
       await waitForInput();
       await actor.delete();
-      expect(openDialogs().length).equal(1);
+      expect(openV2Dialogs().length).equal(1);
       assert(result);
-      await closeDialogs();
+      await closeV2Dialogs();
       await waitForInput();
       await waitForInput();
       await waitForInput();
-      expect(openDialogs().length).equal(0);
+      expect(openV2Dialogs().length).equal(0);
     });
 
     it("Actor with weapon with ", async () => {
@@ -175,8 +189,8 @@ export default ({
       await waitForInput();
       await waitForInput();
       await waitForInput();
-      expect(openDialogs().length).equal(1);
-      await closeDialogs();
+      expect(openV2Dialogs().length).equal(1);
+      await closeV2Dialogs();
       await trashChat();
     });
     it("A OseDice.Roll is returned from method", async () => {
@@ -482,7 +496,7 @@ export default ({
       expect(game.messages?.size).equal(1);
       const chatMessage = game.messages?.contents.pop();
       expect(chatMessage?.blind).equal(rollMode === "blindroll");
-      expect(chatMessage?.type).equal(0);
+      expect(chatMessage?.style).equal(0);
       if (rollMode === "publicroll") {
         expect(chatMessage?.whisper?.length).equal(0);
       } else {

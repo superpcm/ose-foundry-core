@@ -290,7 +290,7 @@ export default class OseItem extends Item {
     return tagList;
   }
 
-  pushManualTag(values) {
+  async pushManualTag(values) {
     const data = this?.system;
     let update = [];
     if (data.tags) {
@@ -311,7 +311,7 @@ export default class OseItem extends Item {
           title = val;
         }
         // Auto fill checkboxes
-        switch (val) {
+        switch (title) {
           case CONFIG.OSE.tags.melee: {
             newData.melee = true;
             break;
@@ -327,8 +327,18 @@ export default class OseItem extends Item {
             break;
           }
         }
-        if (!newData.melee && !newData.slow && !newData.missile)
-          update.push({ title, value: val, label: val });
+
+        // Add the tag if it has a specific title or if it is not a checkbox
+        if (
+          title !== val ||
+          (!newData.melee && !newData.slow && !newData.missile)
+        ) {
+          update.push({
+            title,
+            value: val,
+            label: val,
+          });
+        }
       });
     } else {
       update = values;
@@ -387,12 +397,12 @@ export default class OseItem extends Item {
   async show() {
     const itemType = this.type;
     // Basic template rendering data
-    const { token } = this.actor; // v10: prototypeToken?
+    const token = this.actor?.token;
     const templateData = {
       actor: this.actor,
       tokenId: token ? `${token.parent.id}.${token.id}` : null,
       item: this._source,
-      itemId: this._source.id,
+      itemId: this._source._id,
       data: await this.getChatData(),
       labels: this.labels,
       isHealing: this.isHealing,
@@ -417,9 +427,9 @@ export default class OseItem extends Item {
       type: CONST.CHAT_MESSAGE_STYLES.OTHER,
       content: html,
       speaker: {
-        actor: this.actor.id,
-        token: this.actor.token,
-        alias: this.actor.name,
+        actor: this.actor?.id,
+        token: this.actor?.token,
+        alias: this.actor?.name,
       },
     };
 

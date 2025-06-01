@@ -14,7 +14,7 @@ export const delay = (ms: number) =>
  */
 export const trashChat = (): any => {
   if (game.messages?.size)
-    game.messages?.documentClass.deleteDocuments([], { deleteAll: true });
+    return game.messages?.documentClass.deleteDocuments([], { deleteAll: true });
 };
 
 /**
@@ -97,7 +97,7 @@ export const createMockActorKey = async (
   data: object = {},
   key: string = ""
 ) =>
-  Actor.create({
+  CONFIG.Actor.documentClass.create({
     ...data,
     name: `Test Actor ${key}`,
     type,
@@ -107,7 +107,7 @@ export const createWorldTestItem = async (
   type: string,
   name: string = `New World Test ${type.capitalize()}`
 ) =>
-  Item.create({
+  CONFIG.Item.documentClass.create({
     type,
     name,
   });
@@ -120,14 +120,14 @@ export const createActorTestItem = async (
 ) => actor?.createEmbeddedDocuments("Item", [{ type, name, ...data }]);
 
 export const createMockMacro = async () =>
-  Macro.create({
+  CONFIG.Macro.documentClass.create({
     name: `Mock Macro ${foundry.utils.randomID()}`,
     type: "script",
     command: "console.log('Testing Macro');",
   });
 
 export const createMockScene = async () =>
-  Scene.create({ name: "Mock Scene", tokenVision: true });
+  CONFIG.Scene.documentClass.create({ name: "Mock Scene", tokenVision: true });
 
 export const getMockActorKey = async (key: string) =>
   game.actors?.getName(`Test Actor ${key}`);

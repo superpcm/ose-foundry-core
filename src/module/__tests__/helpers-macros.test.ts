@@ -208,14 +208,14 @@ export default ({
       await game.user?.update({ character: actor?.id });
       await rollItemMacro(`New Actor Test ${type.capitalize()}`);
       await waitForInput();
-      expect(
-        getActiveNotifications().map((li) => li?.textContent?.trim())
-      ).includes(
-        game.i18n.format("OSE.warn.moreThanOneItemWithName", {
-          actorName: actor?.name,
-          itemName: `New Actor Test ${type.capitalize()}`,
-        })
-      );
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          game.i18n.format("OSE.warn.moreThanOneItemWithName", {
+            actorName: actor?.name,
+            itemName: `New Actor Test ${type.capitalize()}`,
+          })
+        );
       await waitForInput();
       expect(openV2Dialogs().length).equal(1);
       await closeV2Dialogs();
@@ -233,7 +233,9 @@ export default ({
       await actor?.items
         .getName(`New Actor Test ${type.capitalize()}`)
         ?.delete();
-      const notification = await rollItemMacro(`New Actor Test ${type.capitalize()}`);
+      const notification = await rollItemMacro(
+        `New Actor Test ${type.capitalize()}`
+      );
       await waitForInput();
       expect(objectIsNotification(notification)).equal(true);
       expect(notification.type).equal("error");

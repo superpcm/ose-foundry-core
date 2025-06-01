@@ -7,7 +7,7 @@ import {
   closeV2Dialogs,
   getActiveNotifications,
   trashChat,
-  waitForInput
+  waitForInput,
 } from "../../e2e/testUtils";
 import OseDice from "../helpers-dice";
 
@@ -542,11 +542,11 @@ export default ({
       rollData.data.roll.dmg = [];
       await OseDice.sendAttackRoll(rollData);
       await waitForInput();
-      expect(
-        getActiveNotifications().map((li) => li?.textContent?.trim())
-      ).includes(
-        "Attack has no damage dice terms; be sure to set the attack's damage"
-      );
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          "Attack has no damage dice terms; be sure to set the attack's damage"
+        );
     });
 
     it("Can roll with single part and single dmg die", async () => {
