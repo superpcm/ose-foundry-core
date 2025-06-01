@@ -3,7 +3,13 @@
  */
 // eslint-disable-next-line prettier/prettier, import/no-cycle
 import { QuenchMethods } from "../../e2e";
-import { closeDialogs, trashChat, waitForInput } from "../../e2e/testUtils";
+import {
+  closeDialogs,
+  getActiveNotifications,
+  objectIsNotification,
+  trashChat,
+  waitForInput
+} from "../../e2e/testUtils";
 import OseDice from "../helpers-dice";
 
 export const key = "ose.helpers.dice";
@@ -36,12 +42,12 @@ export default ({
   const acSetting = game.settings.get(game.system.id, "ascendingAC");
 
   before(async () => {
-    await ui.notifications?.close();
+    await ui.notifications?.clear();
   });
 
   after(async () => {
     game.settings.set(game.system.id, "ascendingAC", acSetting);
-    await ui.notifications?.render(true);
+    await ui.notifications?.clear();
   });
 
   describe("sendRoll(parts, data, title, flavor, speaker, form, chatMessage)", () => {
@@ -532,14 +538,12 @@ export default ({
     });
 
     it("Missing dmg roll shows notification", async () => {
-      ui.notifications?.close();
+      ui.notifications?.clear();
       const rollData = createMockAttackData();
       rollData.data.roll.dmg = [];
       await OseDice.sendAttackRoll(rollData);
       await waitForInput();
-      const notification = ui.notifications?.queue.pop();
-      expect(ui.notifications?.queue.length).equal(0);
-      expect(notification?.message).equal(
+      expect(getActiveNotifications().map((li) => li.textContent.trim())).includes(
         "Attack has no damage dice terms; be sure to set the attack's damage"
       );
     });
@@ -587,9 +591,9 @@ export default ({
         });
         await waitForInput();
         const dialog = document.querySelector(".dialog");
-        expect(dialog?.querySelector(".ok")).not.null;
-        expect(dialog?.querySelector(".magic")).not.null;
-        expect(dialog?.querySelector(".cancel")).not.null;
+        expect(dialog?.querySelector("button[data-action='ok']")).not.null;
+        expect(dialog?.querySelector("button[data-action='magic']")).not.null;
+        expect(dialog?.querySelector("button[data-action='cancel']")).not.null;
         await closeDialogs();
       });
     });
@@ -623,9 +627,9 @@ export default ({
         });
         await waitForInput();
         const dialog = document.querySelector(".dialog");
-        expect(dialog?.querySelector(".ok")).not.null;
-        expect(dialog?.querySelector(".magic")).is.null;
-        expect(dialog?.querySelector(".cancel")).not.null;
+        expect(dialog?.querySelector("button[data-action='ok']")).not.null;
+        expect(dialog?.querySelector("button[data-action='magic']")).is.null;
+        expect(dialog?.querySelector("button[data-action='cancel']")).not.null;
         await closeDialogs();
       });
     });
