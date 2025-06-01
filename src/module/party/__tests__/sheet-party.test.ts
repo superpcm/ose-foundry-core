@@ -107,6 +107,7 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
       // eslint-disable-next-line no-underscore-dangle
       const promisedAnswer = await partySheet._addActorToParty(actor);
       expect(promisedAnswer).is.undefined;
+      await waitForInput();
       assert(actor?.getFlag(game.system.id, "party"));
       await actor.delete();
     });
@@ -119,10 +120,12 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
       // eslint-disable-next-line no-underscore-dangle
       const promisedAddAnswer = await partySheet._addActorToParty(actor);
       expect(promisedAddAnswer).is.undefined;
+      await waitForInput();
       assert(actor?.getFlag(game.system.id, "party"));
       // eslint-disable-next-line no-underscore-dangle
       const promisedRemoveAnswer = await partySheet._removeActorFromParty(actor);
       expect(promisedRemoveAnswer).is.undefined;
+      await waitForInput();
       assert(!actor?.getFlag(game.system.id, "party"));
       await actor.delete();
     });
@@ -165,9 +168,9 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
         name: `Test Folder ${key}`,
         type: "Actor",
       });
-      const actor = await createMockActor("character");
+      let actor = await createMockActor("character");
       // eslint-disable-next-line no-underscore-dangle
-      await actor?.update({ folder: folder?._id });
+      actor = await actor?.update({ folder: folder?._id });
       expect(actor?.folder).equal(folder);
       // eslint-disable-next-line no-underscore-dangle
       partySheet._recursiveAddFolder(folder);
@@ -216,9 +219,9 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
         name: `Test Folder ${key}`,
         type: "Actor",
       });
-      const actor = await createMockActor("character");
+      let actor = await createMockActor("character");
       // eslint-disable-next-line no-underscore-dangle
-      await actor?.update({ folder: folder?._id });
+      actor = await actor?.update({ folder: folder?._id });
       expect(actor?.folder).equal(folder);
       // eslint-disable-next-line no-underscore-dangle
       await partySheet._onDropFolder("", folder);

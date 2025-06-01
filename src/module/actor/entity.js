@@ -56,7 +56,7 @@ export default class OseActor extends Actor {
       newData["system.thac0.value"] = 19 - bbaValue;
     }
 
-    super.update(newData, options);
+    return super.update(newData, options);
   }
 
   async createEmbeddedDocuments(embeddedName, data = [], context = {}) {
