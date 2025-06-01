@@ -327,6 +327,16 @@ export default ({
         });
         item.delete();
       });
+      it(`"${t.toUpperCase()}" tag activates the boolean but not a tag`, async () => {
+        const item: OseItem = await createWorldTestItem("weapon");
+        await pushManualTag(item, t.toUpperCase());
+        testSystemBooleans(item, {
+          melee: true,
+          slow: t.toLowerCase() === CONFIG.OSE.tags.slow.toLowerCase(),
+          missile: t.toLowerCase() === CONFIG.OSE.tags.missile.toLowerCase(),
+        });
+        item.delete();
+      });
       it(`"Test (${t})" tags activates the boolean and adds a tag`, async () => {
         const item: OseItem = await createWorldTestItem("weapon");
         await testPushManualTag(item, `Test (${t})`, {
@@ -338,6 +348,20 @@ export default ({
           melee: true,
           slow: t === CONFIG.OSE.tags.slow,
           missile: t === CONFIG.OSE.tags.missile,
+        });
+        item.delete();
+      });
+      it(`"Test (${t.toUpperCase()})" tags activates the boolean and adds a tag`, async () => {
+        const item: OseItem = await createWorldTestItem("weapon");
+        await testPushManualTag(item, `Test (${t.toUpperCase()})`, {
+          label: "Test",
+          title: t.toUpperCase(),
+          value: "Test",
+        });
+        testSystemBooleans(item, {
+          melee: true,
+          slow: t.toLowerCase() === CONFIG.OSE.tags.slow.toLowerCase(),
+          missile: t.toLowerCase() === CONFIG.OSE.tags.missile.toLowerCase(),
         });
         item.delete();
       });

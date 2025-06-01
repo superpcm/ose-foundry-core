@@ -290,6 +290,15 @@ export default class OseItem extends Item {
     return tagList;
   }
 
+  /**
+   * Push a manual tag to the item.
+   * This will automatically fill in the checkboxes for melee, slow, and missile tags, skipping the tag list.
+   * If the tag has one of these special tags in parentheses (e.g. "Bulky (Slow)"), the Slow checkbox
+   * will be checked, and the tag will be added to the list with the title "Bulky".
+   *
+   * @param {string[]} values - The values of the tags to add.
+   * @returns {Promise<OseItem|undefined>>} - The updated Document instance, or undefined if not updated
+   */
   async pushManualTag(values) {
     const data = this?.system;
     let update = [];
@@ -311,18 +320,18 @@ export default class OseItem extends Item {
           title = val;
         }
         // Auto fill checkboxes
-        switch (title) {
-          case CONFIG.OSE.tags.melee: {
+        switch (title.toLowerCase()) {
+          case CONFIG.OSE.tags.melee.toLowerCase(): {
             newData.melee = true;
             break;
           }
 
-          case CONFIG.OSE.tags.slow: {
+          case CONFIG.OSE.tags.slow.toLowerCase(): {
             newData.slow = true;
             break;
           }
 
-          case CONFIG.OSE.tags.missile: {
+          case CONFIG.OSE.tags.missile.toLowerCase(): {
             newData.missile = true;
             break;
           }
@@ -347,13 +356,21 @@ export default class OseItem extends Item {
     return this.update({ system: newData });
   }
 
+  /**
+   * Remove a manual tag from the item.
+   *
+   * @param {string} value - The value of the tag to remove.
+   * @returns {Promise<OseItem|undefined>} - The updated Document instance, or undefined if not updated
+   */
   popManualTag(value) {
     const itemData = this.system;
 
     const { tags } = itemData;
     if (!tags) return;
 
-    const update = tags.filter((el) => el.value != value);
+    const update = tags.filter(
+      (el) => el.value.toLowerCase() !== value.toLowerCase()
+    );
     const newData = {
       tags: update,
     };
