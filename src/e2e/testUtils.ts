@@ -30,16 +30,19 @@ export const openWindows = (className: string) =>
   );
 
 export const openDialogs = () =>
-  Object.values(ui.windows).filter((o) => o.options.classes.includes("dialog"));
+  Array.from(foundry.applications.instances.values())
+    .filter((o) => o.options.classes.includes("dialog"));
 
 export const closeDialogs = async () => {
-  openDialogs()?.forEach(async (o) => {
+  for (const o of openDialogs()) {
     await o.close();
-  });
+  }
 };
 
 export const closeSheets = async () => {
-  openWindows("sheet").forEach(async (w) => w.close());
+  for (const w of openWindows("sheet")) {
+    await w.close();
+  }
   waitForInput();
 };
 
