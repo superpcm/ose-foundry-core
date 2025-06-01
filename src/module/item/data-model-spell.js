@@ -27,12 +27,12 @@ export default class OseDataModelSpell extends foundry.abstract.TypeDataModel {
     const rollLabel = game.i18n.localize("OSE.items.Roll");
 
     const rollFormula = OseTags.rollTagFormula({
-      actor: this.parent.actor,
+      actor: this.parent?.actor,
       data: this._source,
     });
 
     return {
-      label: `${rollLabel} ${rollFormula}`
+      label: `${rollLabel} ${rollFormula}`,
     };
   }
 
@@ -51,9 +51,9 @@ export default class OseDataModelSpell extends foundry.abstract.TypeDataModel {
 
   get autoTags() {
     return [
-      { label: this.class },
-      { label: this.range },
-      { label: this.duration },
+      { label: this.class ?? "" },
+      { label: this.range ?? "" },
+      { label: this.duration ?? "" },
       this.#rollTag,
       this.#saveTag,
     ].filter((t) => !!t);
