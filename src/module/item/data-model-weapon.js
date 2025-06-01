@@ -106,7 +106,7 @@ export default class OseDataModelWeapon extends foundry.abstract.TypeDataModel {
     );
 
     return [
-      { label: this.damage, icon: "fa-tint" },
+      { label: this.damage ?? "", icon: "fa-tint" },
       this.#meleeTag,
       this.#missileTag,
       this.#slowTag,
