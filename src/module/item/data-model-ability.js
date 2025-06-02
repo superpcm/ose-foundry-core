@@ -27,7 +27,7 @@ export default class OseDataModelAbility extends foundry.abstract
     const rollLabel = game.i18n.localize("OSE.items.Roll");
 
     const rollFormula = OseTags.rollTagFormula({
-      actor: this.parent.actor,
+      actor: this.parent?.actor,
       data: this._source,
     });
 
@@ -37,7 +37,7 @@ export default class OseDataModelAbility extends foundry.abstract
     });
 
     return {
-      label: `${rollLabel} ${rollFormula}${rollTarget}`
+      label: `${rollLabel} ${rollFormula}${rollTarget}`,
     };
   }
 
@@ -56,7 +56,7 @@ export default class OseDataModelAbility extends foundry.abstract
 
   get autoTags() {
     return [
-      ...this.requirements.split(",").map((req) => ({ label: req.trim() })),
+      ...(this.requirements?.split(",").map((req) => ({ label: req.trim() })) || []),
       this.#rollTag,
       this.#saveTag,
     ].filter((t) => !!t);
