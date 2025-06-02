@@ -5,8 +5,8 @@
 import { QuenchMethods } from "../../../e2e";
 import {
   cleanUpActorsByKey,
-  closeV2Dialogs,
   closeSheets,
+  closeV2Dialogs,
   createActorTestItem,
   createMockActorKey,
   delay,
