@@ -138,26 +138,28 @@ export const getMockActorKey = async (key: string) =>
 
 export const cleanUpMacros = async () => {
   const mockMacros = game.macros?.filter((o) => o.name?.includes("Mock Macro"));
-  mockMacros?.forEach(async (o) => await o.delete());
+  for (const o of mockMacros || []) {
+    await o.delete();
+  }
   return true;
 };
 
 export const cleanUpActorsByKey = async (key: string) => {
-  game.actors
-    ?.filter((a) => a.name === `Test Actor ${key}`)
-    .forEach(async (a) => await a.delete());
+  for (const a of game.actors?.filter((a) => a.name === `Test Actor ${key}`)) {
+    await a.delete();
+  }
 };
 
 export const cleanUpWorldItems = async () => {
-  game.items
-    ?.filter((a) => a?.name?.includes("New World Test"))
-    .forEach(async (a) => await a.delete());
+  for (const a of game.items?.filter((a) => a?.name?.includes("New World Test"))) {
+    await a.delete();
+  }
 };
 
 export const cleanUpScenes = async () => {
-  game.scenes
-    ?.filter((s) => s.name === "Mock Scene")
-    .forEach(async (s) => await s.delete());
+  for (const s of game.scenes?.filter((s) => s.name === "Mock Scene")) {
+    await s.delete();
+  }
 };
 
 /**

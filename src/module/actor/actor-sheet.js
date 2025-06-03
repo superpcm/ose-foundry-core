@@ -390,8 +390,8 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
     const { itemIds } = targetContainer.system;
     itemIds.push(droppedItem.id);
     const item = this.actor.items.get(droppedItem[0].id);
-    await item.update({ system: { containerId: targetContainer.id } });
     await targetContainer.update({ system: { itemIds } });
+    return item.update({ system: { containerId: targetContainer.id } });
   }
 
   /* -------------------------------------------- */
