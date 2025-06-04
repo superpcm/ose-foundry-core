@@ -79,19 +79,22 @@ export default class OseActorSheetCharacter extends OseActorSheet {
    * The prepared data object contains both the actor data as well as additional sheet options
    */
   async getData() {
-    const data = super.getData();
-    
+    const data = await super.getData();
+
     // Prepare owned items
     this._prepareItems(data);
 
-    data.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.object.system.details.biography,
-      { async: true }
-    );
-    data.enrichedNotes = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.object.system.details.notes,
-      { async: true }
-    );
+    data.enrichedBiography =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        this.object.system.details.biography,
+        { async: true }
+      );
+    data.enrichedNotes =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        this.object.system.details.notes,
+        { async: true }
+      );
+
     return data;
   }
 

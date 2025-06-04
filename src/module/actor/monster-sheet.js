@@ -56,7 +56,7 @@ export default class OseActorSheetMonster extends OseActorSheet {
    * The prepared data object contains both the actor data as well as additional sheet options
    */
   async getData() {
-    const data = super.getData();
+    const data = await super.getData();
     // Prepare owned items
     this._prepareItems(data);
 
@@ -64,18 +64,18 @@ export default class OseActorSheetMonster extends OseActorSheet {
 
     // Settings
     data.config.morale = game.settings.get(game.system.id, "morale");
-    monsterData.details.treasure.link = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      monsterData.details.treasure.table,
-      { async: true }
-    );
+    monsterData.details.treasure.link =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        monsterData.details.treasure.table,
+        { async: true }
+      );
     data.isNew = this.actor.isNew();
 
-    if (foundry.utils.isNewerVersion(game.version, "10.264")) {
-      data.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+    data.enrichedBiography =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
         this.object.system.details.biography,
         { async: true }
       );
-    }
     return data;
   }
 

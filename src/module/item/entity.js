@@ -52,10 +52,11 @@ export default class OseItem extends Item {
 
   async prepareDerivedData() {
     // Rich text description
-    this.system.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.system.details?.description || this.system.description,
-      { async: true }
-    );
+    this.system.enrichedDescription =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        this.system.description,
+        { async: true }
+      );
   }
 
   static chatListeners(html) {
@@ -207,7 +208,7 @@ export default class OseItem extends Item {
       await this.rollFormula()
     } else {
       await this.show({ skipDialog: true })
-    };
+    }
   }
 
   _getRollTag(data) {

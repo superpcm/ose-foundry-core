@@ -107,7 +107,7 @@
           {{/if}}
         </div>
       </div>
-      <div class="item-summary">
+      <div class="item-summary{{#if item.isExpanded}} expanded{{/if}}">
         {{> (path "/templates/actors/partials/actor-item-summary.html")
         item=item}}
       </div>

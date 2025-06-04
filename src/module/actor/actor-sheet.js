@@ -6,8 +6,29 @@ import OseEntityTweaks from "../dialog/entity-tweaks";
 import skipRollDialogCheck from "../helpers-behaviour";
 
 export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
-  getData() {
+  /**
+   * IDs for items on the sheet that have been expanded.
+   * @type {Set<string>}
+   * @protected
+   */
+  _expanded = new Set();
+
+  async getData() {
     const data = foundry.utils.deepClone(super.getData().data);
+    for (const i of this.actor.items) {
+      const isExpanded = this._expanded.has(i.id);
+      i.isExpanded = isExpanded;
+      if (isExpanded) {
+        await i.prepareDerivedData();
+      }
+    }
+    for (const i of data.items) {
+      const isExpanded = this._expanded.has(i.id);
+      i.isExpanded = isExpanded;
+      if (isExpanded) {
+        await i.prepareDerivedData();
+      }
+    }
     data.owner = this.actor.isOwner;
     data.editable = this.actor.sheet.isEditable;
 
@@ -84,10 +105,14 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
 
   _toggleItemSummary(event) {
     event.preventDefault();
-    const itemSummary = event.currentTarget
-      .closest(".item-entry.item")
-      .querySelector(".item-summary");
-    itemSummary.style.display = itemSummary.style.display === "" ? "block" : "";
+    const item = event.currentTarget.closest(".item-entry.item");
+    const itemSummary = item.querySelector(".item-summary");
+    if (itemSummary.classList.contains("expanded")) {
+      this._expanded.delete(item.dataset.itemId);
+    } else {
+      this._expanded.add(item.dataset.itemId);
+    }
+    itemSummary.classList.toggle("expanded");
   }
 
   async _displayItemInChat(event) {
@@ -157,18 +182,25 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   async _resetSpells(event) {
-    const spells = $(event.currentTarget)
-      .closest(".inventory.spells")
-      .find(".item-entry");
-    spells.each((_, el) => {
+    const spellsContainer = event.currentTarget.closest(".inventory.spells");
+    const spellElements = spellsContainer.querySelectorAll(".item-entry");
+
+    const updates = [];
+    for (const el of spellElements) {
       const { itemId } = el.dataset;
       const item = this.actor.items.get(itemId);
-      const itemData = item?.system;
-      item.update({
-        _id: item.id,
-        "system.cast": itemData.memorized,
-      });
-    });
+
+      if (item?.system) {
+        updates.push({
+          _id: item.id,
+          "system.cast": item.system.memorized,
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await this.actor.updateEmbeddedDocuments("Item", updates);
+    }
   }
 
   async _rollAbility(event) {
@@ -176,15 +208,15 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
     const itemData = item?.system;
     if (item.type === "weapon") {
       if (this.actor.type === "monster") {
-        item.update({
+        await item.update({
           "system.counter.value": itemData.counter.value - 1,
         });
       }
       item.rollWeapon({ skipDialog: skipRollDialogCheck(event) });
     } else if (item.type == "spell") {
-      item.spendSpell({ skipDialog: skipRollDialogCheck(event) });
+      await item.spendSpell({ skipDialog: skipRollDialogCheck(event) });
     } else {
-      item.rollFormula({ skipDialog: skipRollDialogCheck(event) });
+      await item.rollFormula({ skipDialog: skipRollDialogCheck(event) });
     }
   }
 
@@ -548,7 +580,8 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
           icon: "fas fa-code",
           onclick: (event) => this._onConfigureActor(event),
         },
-      ].concat(buttons);
+        ...buttons,
+      ];
     }
     return buttons;
   }
