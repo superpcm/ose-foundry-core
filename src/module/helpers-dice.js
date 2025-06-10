@@ -99,7 +99,7 @@ const OseDice = {
       total: roll.total,
     };
 
-    const die = roll.terms[0].results[0].result;
+    const die = roll.dice?.[0]?.results?.[0]?.result ?? roll.total;
     // eslint-disable-next-line default-case
     switch (data.roll.type) {
       case "result": {
@@ -209,8 +209,8 @@ const OseDice = {
     result.target = data.roll.thac0;
     const targetActorData = data.roll.target?.actor?.system || null;
 
-    const targetAc = data.roll.target ? targetActorData.ac.value : 9;
-    const targetAac = data.roll.target ? targetActorData.aac.value : 10;
+    const targetAc = data.roll.target ? targetActorData?.ac?.value : 9;
+    const targetAac = data.roll.target ? targetActorData?.aac?.value : 10;
     result.victim = data.roll.target || null;
 
     if (game.settings.get(game.system.id, "ascendingAC")) {

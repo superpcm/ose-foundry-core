@@ -5,9 +5,11 @@
 import { QuenchMethods } from "../../../../e2e";
 import {
   cleanUpActorsByKey,
+  cleanUpCompendium,
   cleanUpWorldItems,
   createActorTestItem,
   createMockActorKey,
+  createMockCompendium,
   createWorldTestItem,
   itemTypes,
   waitForInput, // eslint-disable-next-line prettier/prettier
@@ -110,28 +112,6 @@ export default ({
   describe("_onDropItem(event, data)", () => {});
 
   describe("_onDragStart(event, data) & _onDrop(event, data) - Containers", () => {
-    // @todo: Move out to outer scope for re-use, potentially testUtils.
-    /* --------------------------------------------- */
-    /* Mock Helper functions                         */
-    /* --------------------------------------------- */
-    const createMockCompendium = async (
-      type: CompendiumCollection.Metadata["type"]
-      // eslint-disable-next-line unicorn/consistent-function-scoping
-    ) =>
-      // eslint-disable-next-line no-undef
-      foundry.documents.collections.CompendiumCollection.createCompendium({
-        label: "Test Compendium",
-        name: "testcompendium",
-        type,
-        path: "",
-        private: false,
-        package: "world",
-      });
-
-    // eslint-disable-next-line unicorn/consistent-function-scoping
-    const cleanUpCompendium = async () =>
-      game.packs.get("world.testcompendium")?.deleteCompendium();
-
     /* --------------------------------------------- */
     /* Check Test Helper functions                   */
     /* --------------------------------------------- */

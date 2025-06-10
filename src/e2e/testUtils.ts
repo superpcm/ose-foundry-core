@@ -132,6 +132,24 @@ export const createMockScene = async () =>
 export const getMockActorKey = async (key: string) =>
   game.actors?.getName(`Test Actor ${key}`);
 
+export const createMockCompendium = async (
+  type: CompendiumCollection.Metadata["type"]
+  // eslint-disable-next-line unicorn/consistent-function-scoping
+): Promise<CompendiumCollection> =>
+  // eslint-disable-next-line no-undef
+  foundry.documents.collections.CompendiumCollection.createCompendium({
+    label: "Test Compendium",
+    name: "testcompendium",
+    type,
+    path: "",
+    private: false,
+    package: "world"
+  });
+
+// eslint-disable-next-line unicorn/consistent-function-scoping
+export const cleanUpCompendium = async () =>
+  game.packs.get("world.testcompendium")?.deleteCompendium();
+
 /**
  * CLEANUP HELPERS
  */

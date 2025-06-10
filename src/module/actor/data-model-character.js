@@ -39,13 +39,7 @@ export default class OseDataModelCharacter extends foundry.abstract.TypeDataMode
     //       we shouldn't need to list both AC schemes
     this.ac = new OseDataModelCharacterAC(
       false,
-      [
-        ...getItemsOfActorOfType(
-          this.parent,
-          "armor",
-          (a) => a.system.equipped
-        ),
-      ],
+      getItemsOfActorOfType(this.parent, "armor", (a) => a.system.equipped),
       this.scores.dex.mod,
       this.ac.mod
     );

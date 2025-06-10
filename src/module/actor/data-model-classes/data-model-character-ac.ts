@@ -37,7 +37,12 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    * @param {number} dexMod - The bonus/penalty, from -3 to +3, applied to AC.
    * @param {number} mod - Miscellaneous modifier to AC
    */
-  constructor(isAscending = false, armor: Item[] = [], dexMod = 0, mod = 0) {
+  constructor(
+    isAscending: boolean = false,
+    armor: Item[] = [],
+    dexMod: number = 0,
+    mod: number = 0
+  ) {
     this.#isAscending = isAscending;
     this.#armor = armor;
     this.#dexMod = dexMod;
@@ -47,7 +52,7 @@ export default class OseDataModelCharacterAC implements CharacterAC {
       : OseDataModelCharacterAC.propDescending;
   }
 
-  #getShieldBonus() {
+  #getShieldBonus(): number {
     return (
       this.#armor.find(({ system: { type } }: Item) => type === "shield")
         ?.system[this.#acProp].value || 0
@@ -58,9 +63,9 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    * The base AC value for a character, depending on
    * if we're using ascending or descending AC
    *
-   * @returns {boolean} - Truthy for ascending, falsy for descending
+   * @returns {number} - The base AC value
    */
-  get base() {
+  get base(): number {
     return this.#isAscending
       ? OseDataModelCharacterAC.baseAscending
       : OseDataModelCharacterAC.baseDescending;
@@ -71,7 +76,7 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    *
    * @returns {number} - The character's naked AC
    */
-  get naked() {
+  get naked(): number {
     return this.#isAscending
       ? this.base + this.#dexMod
       : this.base - this.#dexMod;
@@ -82,7 +87,7 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    *
    * @returns {number} - The shield bonus
    */
-  get shield() {
+  get shield(): number {
     return this.#getShieldBonus();
   }
 
@@ -90,9 +95,9 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    * The AC value from worn armor
    *
    * @todo After data migration, armor should be a bonus to naked AC.
-   * @returns {number} - The AC value from worn armor
+   * @returns {number | null} - The AC value from worn armor
    */
-  get #armored() {
+  get #armored(): number | null {
     const armor = this.#armor.find(
       ({ system: { type } }: Item) => type !== "shield"
     )?.system[this.#acProp].value;
@@ -108,7 +113,7 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    * @todo Data migration for armor with AC/AAC to act as a bonus, not an override
    * @returns {number} - The creature's AC
    */
-  get value() {
+  get value(): number {
     const base = this.#armored === null ? this.naked : this.#armored;
     return this.#isAscending
       ? base + this.shield + this.mod
@@ -124,11 +129,11 @@ export default class OseDataModelCharacterAC implements CharacterAC {
    *
    * @returns {number} - The creature's AC modifier
    */
-  get mod() {
+  get mod(): number {
     return this.#mod;
   }
 
-  set mod(change) {
+  set mod(change: number) {
     this.#mod = change;
   }
 }
