@@ -70,6 +70,7 @@ Hooks.once("init", async () => {
     formula: isGroupInitiative ? OSECombat.GROUP_FORMULA : OSECombat.FORMULA,
   };
 
+  CONFIG.Combat.fallbackTurnMarker = "icons/svg/circle.svg";
   CONFIG.ui.combat = OSECombatTracker;
   CONFIG.Token.rulerClass = TokenRulerOSE;
 
