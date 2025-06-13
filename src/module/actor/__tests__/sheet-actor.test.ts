@@ -166,7 +166,6 @@ export default ({
     });
   });
 
-  // @todo: Introduce Extended from dnd5e/PF2e
   describe("_toggleItemCategory(event)", () => {
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickCategory = async () => {
@@ -378,8 +377,6 @@ export default ({
             .that.does.not.include("expanded");
         });
         it("item containing description still shows the summary", async () => {
-          // @todo: This fails, as updated item re-renders the sheet,
-          //        and it collapses the summary
           const sheets = openWindows("sheet");
           expect(sheets.length).equal(1);
           await clickNavTab(tab);
@@ -1315,7 +1312,6 @@ export default ({
   // @todo: How to test?
   describe("_onResize(event)", () => {});
 
-  // @todo: Dose this work now?
   describe("_onConfigureActor(event)", () => {
     for (const actorType of ["character", "monster"]) {
       it(`Entity Tweaks renders for ${actorType}`, async () => {
