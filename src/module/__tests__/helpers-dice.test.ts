@@ -6,6 +6,7 @@ import { QuenchMethods } from "../../e2e";
 import {
   closeV2Dialogs,
   getActiveNotifications,
+  rollSpecificNumber,
   trashChat,
   waitForInput,
 } from "../../e2e/testUtils";
@@ -550,6 +551,10 @@ export default ({
     });
 
     it("Can roll with single part and single dmg die", async () => {
+      // Ensure the dice roll is a 10 to make sure the attack is successful
+      const existingRandomFunction = CONFIG.Dice.randomUniform;
+      CONFIG.Dice.randomUniform = () => rollSpecificNumber(10, 20);
+
       const rollData = createMockAttackData();
       await OseDice.sendAttackRoll(rollData);
       await waitForInput();
@@ -563,6 +568,9 @@ export default ({
         ".damage-roll .dice-formula"
       )?.innerHTML;
       expect(damageDiceResult).equal("1d6");
+
+      // Restore the original random function
+      CONFIG.Dice.randomUniform = existingRandomFunction;
     });
     afterEach(async () => {
       await trashChat();
