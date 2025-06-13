@@ -1336,20 +1336,16 @@ export default ({
           (win) => win.object?.name === `Test Actor ${key} ${actorType}`
         );
         expect(w.length).equal(1);
-        const windowElement = w[0]?.element?.[0];
+        const windowElement = w?.[0]?.element?.[0];
         expect(windowElement).not.undefined;
         expect(
           windowElement.querySelector("h4.window-title").innerHTML
         ).to.include(`Test Actor ${key} ${actorType}`);
         // eslint-disable-next-line no-restricted-syntax
-        await w[0].close();
+        await w?.[0]?.close();
+        await actor?.delete();
       });
     }
-
-    afterEach(async () => {
-      await cleanUpActorsByKey(key);
-      await waitForInput();
-    });
   });
 
   // @todo: How to test?
