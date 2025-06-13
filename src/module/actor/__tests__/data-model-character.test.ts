@@ -9,6 +9,7 @@ import {
   getMockActorKey,
 } from "../../../e2e/testUtils";
 import OseDataModelCharacter from "../data-model-character";
+import OseDataModelCharacterScores from "../data-model-classes/data-model-character-scores";
 
 export const key = "ose.actor.datamodel.character";
 export const options = { displayName: "OSE: Actor: Data Model: Character" };
@@ -24,11 +25,11 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
     "encumbranceOption"
   );
 
-  after(() => {
+  after(async () => {
     game.settings.set(game.system.id, "ascendingAC", ascendingACSetting);
     game.settings.set(game.system.id, "initiative", initiativeSetting);
     game.settings.set(game.system.id, "encumbranceOption", encumbranceSetting);
-    cleanUpActorsByKey(key);
+    await cleanUpActorsByKey(key);
   });
 
   // @todo: Can this be tested without creating an actor?
@@ -120,8 +121,8 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
       });
     });
 
-    after(() => {
-      cleanUpActorsByKey(key);
+    after(async () => {
+      await cleanUpActorsByKey(key);
     });
   });
 
@@ -176,8 +177,8 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
       });
     });
 
-    after(() => {
-      cleanUpActorsByKey(key);
+    after(async () => {
+      await cleanUpActorsByKey(key);
     });
   });
 
@@ -353,6 +354,10 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
       );
       expect(testActor?.system.isNew).to.be.false;
     });
+
+    after(async () => {
+      await cleanUpActorsByKey(key);
+    });
   });
 
   describe("containers()", () => {
@@ -364,17 +369,13 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         { type: "container", name: "test container" },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test container");
-      // eslint-disable-next-line no-underscore-dangle
-      const itemId = actor?.items.contents[0].id;
+      const itemContainer = actor?.items.getName("test container");
+      expect(itemContainer).to.not.be.undefined;
+      expect(itemContainer?.name).equal("test container");
       expect(actor?.system.containers.length).equal(1);
       // eslint-disable-next-line no-underscore-dangle
-      expect(actor?.system.containers[0]._id).equal(itemId);
-      actor?.delete();
-    });
-
-    after(() => {
-      cleanUpActorsByKey(key);
+      expect(actor?.system.containers[0]._id).equal(itemContainer?.id);
+      await actor?.delete();
     });
   });
 
@@ -387,14 +388,14 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         { type: "item", name: "test treasure", system: { treasure: true } },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test treasure");
-      expect(actor?.items.contents[0].system.treasure).is.true;
-      // eslint-disable-next-line no-underscore-dangle
-      const itemId = actor?.items.contents[0].id;
+      const itemTreasure = actor?.items.getName("test treasure");
+      expect(itemTreasure).to.not.be.undefined;
+      expect(itemTreasure?.name).equal("test treasure");
+      expect(itemTreasure?.system.treasure).is.true;
       expect(actor?.system.treasures.length).equal(1);
       // eslint-disable-next-line no-underscore-dangle
-      expect(actor?.system.treasures[0]._id).equal(itemId);
-      actor?.delete();
+      expect(actor?.system.treasures[0]._id).equal(itemTreasure?.id);
+      await actor?.delete();
     });
 
     it("doesn't returns treasures on actor if in container", async () => {
@@ -405,8 +406,9 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         { type: "container", name: "test container" },
       ]);
       const container = actor?.items.getName("test container");
+      expect(container).to.not.be.undefined;
+      expect(container?.name).equal("test container");
       await actor?.createEmbeddedDocuments("Item", [
-        // eslint-disable-next-line no-underscore-dangle
         {
           type: "item",
           name: "test treasure",
@@ -414,16 +416,13 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(2);
-      expect(actor?.items.contents[0].name).equal("test container");
-      expect(actor?.items.contents[1].name).equal("test treasure");
-      expect(actor?.items.contents[1].system.treasure).is.true;
-      expect(actor?.items.contents[1].system.containerId).equal(container?.id);
+      const itemTreasure = actor?.items.getName("test treasure");
+      expect(itemTreasure).to.not.be.undefined;
+      expect(itemTreasure?.name).equal("test treasure");
+      expect(itemTreasure?.system.treasure).is.true;
+      expect(itemTreasure?.system.containerId).equal(container?.id);
       expect(actor?.system.treasures.length).equal(0);
-      actor?.delete();
-    });
-
-    after(() => {
-      cleanUpActorsByKey(key);
+      await actor?.delete();
     });
   });
 
@@ -440,10 +439,12 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test treasure");
-      expect(actor?.items.contents[0].system.treasure).is.true;
+      const itemTreasure = actor?.items.getName("test treasure");
+      expect(itemTreasure).to.not.be.undefined;
+      expect(itemTreasure?.name).equal("test treasure");
+      expect(itemTreasure?.system.treasure).is.true;
       expect(actor?.system.carriedTreasure).equal(10);
-      actor?.delete();
+      await actor?.delete();
     });
 
     it("return multiple treasure value on actor", async () => {
@@ -463,12 +464,16 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(2);
-      expect(actor?.items.contents[0].name).equal("test treasure");
-      expect(actor?.items.contents[0].system.treasure).is.true;
-      expect(actor?.items.contents[1].name).equal("test treasure 2");
-      expect(actor?.items.contents[1].system.treasure).is.true;
+      const itemTreasure = actor?.items.getName("test treasure");
+      expect(itemTreasure).to.not.be.undefined;
+      expect(itemTreasure?.name).equal("test treasure");
+      expect(itemTreasure?.system.treasure).is.true;
+      const itemTreasure2 = actor?.items.getName("test treasure 2");
+      expect(itemTreasure2).to.not.be.undefined;
+      expect(itemTreasure2?.name).equal("test treasure 2");
+      expect(itemTreasure2?.system.treasure).is.true;
       expect(actor?.system.carriedTreasure).equal(10 + 3 * 4);
-      actor?.delete();
+      await actor?.delete();
     });
 
     it("doesn't returns treasure value on actor if in container", async () => {
@@ -479,8 +484,9 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         { type: "container", name: "test container" },
       ]);
       const container = actor?.items.getName("test container");
+      expect(container).to.not.be.undefined;
+      expect(container?.name).equal("test container");
       await actor?.createEmbeddedDocuments("Item", [
-        // eslint-disable-next-line no-underscore-dangle
         {
           type: "item",
           name: "test treasure",
@@ -493,17 +499,13 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(2);
-      expect(actor?.items.contents[0].name).equal("test container");
-      expect(actor?.items.contents[1].name).equal("test treasure");
-      expect(actor?.items.contents[1].system.treasure).is.true;
-      // eslint-disable-next-line no-underscore-dangle
-      expect(actor?.items.contents[1].system.containerId).equal(container?.id);
+      const itemTreasure = actor?.items.getName("test treasure");
+      expect(itemTreasure).to.not.be.undefined;
+      expect(itemTreasure?.name).equal("test treasure");
+      expect(itemTreasure?.system.treasure).is.true;
+      expect(itemTreasure?.system.containerId).equal(container?.id);
       expect(actor?.system.carriedTreasure).equal(0);
-      actor?.delete();
-    });
-
-    after(() => {
-      cleanUpActorsByKey(key);
+      await actor?.delete();
     });
   });
 
@@ -524,12 +526,16 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(2);
-      expect(actor?.items.contents[0].name).equal("test item");
-      expect(actor?.items.contents[1].name).equal("test treasure");
-      expect(actor?.items.contents[1].system.treasure).is.true;
+      const testItem = actor?.items.getName("test item");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test item");
+      const testTreasure = actor?.items.getName("test treasure");
+      expect(testTreasure).to.not.be.undefined;
+      expect(testTreasure?.name).equal("test treasure");
+      expect(testTreasure?.system.treasure).is.true;
       expect(actor?.system.items.length).equal(1);
       expect(actor?.system.items[0].name).equal("test item");
-      actor?.delete();
+      await actor?.delete();
     });
 
     it("only returns other items than stored in containers", async () => {
@@ -543,8 +549,9 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       const container = actor?.items.getName("test container");
+      expect(container).to.not.be.undefined;
+      expect(container?.name).equal("test container");
       await actor?.createEmbeddedDocuments("Item", [
-        // eslint-disable-next-line no-underscore-dangle
         {
           type: "item",
           name: "test item in container",
@@ -556,12 +563,15 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(3);
-      expect(actor?.items.contents[0].name).equal("test container");
-      expect(actor?.items.contents[1].name).equal("test item in container");
-      expect(actor?.items.contents[2].name).equal("test item");
+      const itemInContainer = actor?.items.getName("test item in container");
+      expect(itemInContainer).to.not.be.undefined;
+      expect(itemInContainer?.name).equal("test item in container");
+      const testItem = actor?.items.getName("test item");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test item");
       expect(actor?.system.items.length).equal(1);
       expect(actor?.system.items[0].name).equal("test item");
-      actor?.delete();
+      await actor?.delete();
     });
   });
 
@@ -569,7 +579,7 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
     { type: "weapon", getter: "weapons" },
     { type: "ability", getter: "abilities" },
     { type: "armor", getter: "armor" },
-    { type: "spell", getter: "#spellList" },
+    { type: "spell", getter: "spellList" },
   ];
   testTypes.forEach(({ type, getter }) => {
     describe(`${getter}()`, () => {
@@ -581,17 +591,28 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
           { type, name: `test ${type}` },
         ]);
         expect(actor?.items.contents.length).equal(1);
-        expect(actor?.items.contents[0].name).equal(`test ${type}`);
-        // eslint-disable-next-line no-underscore-dangle
-        const itemId = actor?.items.contents[0].id;
+        const testItem = actor?.items.getName(`test ${type}`);
+        expect(testItem).to.not.be.undefined;
+        expect(testItem?.name).equal(`test ${type}`);
         expect(actor?.system[getter].length).equal(1);
         // eslint-disable-next-line no-underscore-dangle
-        expect(actor?.system[getter][0]._id).equal(itemId);
-        actor?.delete();
+        expect(actor?.system[getter][0]._id).equal(testItem?.id);
+        await actor?.delete();
       });
 
       it(`returns all ${getter} except ones in container`, async () => {
-        if (getter === "abilities") return;
+        switch (getter) {
+          case "abilities":
+            // Abilities are not stored in containers
+            return;
+
+          case "spellList":
+            // Spells are not stored in containers
+            return;
+
+          default:
+            break;
+        }
 
         const actor = await createMockActor();
         expect(actor?.items.contents.length).equal(0);
@@ -603,8 +624,9 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
           },
         ]);
         const container = actor?.items.getName("test container");
+        expect(container).to.not.be.undefined;
+        expect(container?.name).equal("test container");
         await actor?.createEmbeddedDocuments("Item", [
-          // eslint-disable-next-line no-underscore-dangle
           {
             type,
             name: `test ${type} in container`,
@@ -616,21 +638,18 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
           },
         ]);
         expect(actor?.items.contents.length).equal(3);
-        expect(actor?.items.contents[0].name).equal("test container");
-        expect(actor?.items.contents[1].name).equal(
+        const itemInContainer = actor?.items.getName(
           `test ${type} in container`
         );
-        expect(actor?.items.contents[2].name).equal(`test ${type}`);
-        // eslint-disable-next-line no-underscore-dangle
-        const itemId = actor?.items.contents[2].id;
+        expect(itemInContainer).to.not.be.undefined;
+        expect(itemInContainer?.name).equal(`test ${type} in container`);
+        const testItem = actor?.items.getName(`test ${type}`);
+        expect(testItem).to.not.be.undefined;
+        expect(testItem?.name).equal(`test ${type}`);
         expect(actor?.system[getter].length).equal(1);
         // eslint-disable-next-line no-underscore-dangle
-        expect(actor?.system[getter][0]._id).equal(itemId);
-        actor?.delete();
-      });
-
-      after(() => {
-        cleanUpActorsByKey(key);
+        expect(actor?.system[getter][0]._id).equal(testItem?.id);
+        await actor?.delete();
       });
     });
   });
@@ -639,7 +658,7 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
     it("returns false if no weapons", async () => {
       const actor = await createMockActor();
       expect(actor?.system.isSlow).is.false;
-      actor?.delete();
+      await actor?.delete();
     });
 
     it("returns false if weapon that has slow tag and not equipped", async () => {
@@ -653,12 +672,14 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test weapon");
+      const testItem = actor?.items.getName("test weapon");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test weapon");
       expect(actor?.system.isSlow).is.false;
-      actor?.delete();
+      await actor?.delete();
     });
 
-    it("returns false if weapon that doesn't have slow tag and not equipped", async () => {
+    it("returns false if weapon that doesn't have slow tag and is equipped", async () => {
       const actor = await createMockActor();
       expect(actor?.items.contents.length).equal(0);
       await actor?.createEmbeddedDocuments("Item", [
@@ -669,9 +690,11 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test weapon");
+      const testItem = actor?.items.getName("test weapon");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test weapon");
       expect(actor?.system.isSlow).is.false;
-      actor?.delete();
+      await actor?.delete();
     });
 
     it("returns true if weapon that has slow tag and is equipped", async () => {
@@ -685,13 +708,11 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test weapon");
+      const testItem = actor?.items.getName("test weapon");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test weapon");
       expect(actor?.system.isSlow).is.true;
-      actor?.delete();
-    });
-
-    after(() => {
-      cleanUpActorsByKey(key);
+      await actor?.delete();
     });
   });
 
@@ -730,8 +751,10 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
     describe("individual inititative", () => {
       before(async () => {
         await game.settings.set(game.system.id, "initiative", "individual");
-        // @todo: tests fails if scores.dex.init isn't initiated
-        // dataModel.scores.dex = { init: 0 };
+        // Initialise the scores with a "standard" dexterity score
+        dataModel.scores = new OseDataModelCharacterScores({
+          dex: { value: 9, bonus: 0, mod: 0 },
+        });
       });
 
       it("returns 0 by default", () => {
@@ -754,10 +777,25 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
         dataModel.initiative.mod = 0;
         expect(dataModel.initiative.mod).equal(0);
       });
+
       it("returns correctly with dex mod init set", async () => {
-        dataModel.scores.dex = { init: 5 };
-        expect(dataModel.init).equal(5);
-        dataModel.scores.dex.init = 0;
+        // See the Ability Scores section in the OSE SRD for how dexterity affects initiative
+        dataModel.scores.dex = { value: 18 };
+        expect(dataModel.init).equal(2);
+        dataModel.scores.dex = { value: 9 };
+        expect(dataModel.scores.dex.init).equal(0);
+      });
+
+      it("returns correctly with initiative value, mod, and dex mod init set", async () => {
+        dataModel.initiative.value = 12;
+        dataModel.initiative.mod = 10;
+        dataModel.scores.dex = { value: 18 };
+        expect(dataModel.init).equal(24);
+        dataModel.initiative.value = 0;
+        expect(dataModel.initiative.value).equal(0);
+        dataModel.initiative.mod = 0;
+        expect(dataModel.initiative.mod).equal(0);
+        dataModel.scores.dex = { value: 9 };
         expect(dataModel.scores.dex.init).equal(0);
       });
     });

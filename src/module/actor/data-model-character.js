@@ -68,7 +68,10 @@ export default class OseDataModelCharacter extends foundry.abstract.TypeDataMode
       encumbrance: new ObjectField(),
       movement: new ObjectField(),
       config: new ObjectField(),
-      initiative: new ObjectField(),
+      initiative: new SchemaField({
+        value: new NumberField({ integer: false, initial: 0 }),
+        mod: new NumberField({ integer: false, initial: 0 }),
+      }),
       hp: new SchemaField({
         hd: new StringField(),
         value: new NumberField({ integer: true }),
@@ -188,12 +191,17 @@ export default class OseDataModelCharacter extends foundry.abstract.TypeDataMode
     ).sort((a, b) => (a.sort || 0) - (b.sort || 0));
   }
 
-  get #spellList() {
+  get spellList() {
     return getItemsOfActorOfType(
       this.parent,
       "spell",
       ({ system: { containerId } }) => !containerId
     );
+  }
+
+  get #spellList() {
+    // Maintain backwards compatibility
+    return this.spellList;
   }
 
   get isSlow() {
@@ -209,7 +217,6 @@ export default class OseDataModelCharacter extends foundry.abstract.TypeDataMode
         );
   }
 
-  // @todo How to test this?
   get init() {
     const group = game.settings.get(game.system.id, "initiative") !== "group";
 
