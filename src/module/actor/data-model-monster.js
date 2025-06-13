@@ -62,7 +62,10 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
       }),
       movement: new ObjectField(),
       config: new ObjectField(),
-      initiative: new ObjectField(),
+      initiative: new SchemaField({
+        value: new NumberField({ integer: false, initial: 0 }),
+        mod: new NumberField({ integer: false, initial: 0 }),
+      }),
       hp: new SchemaField({
         hd: new StringField(),
         value: new NumberField({ integer: true }),
@@ -186,6 +189,8 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
   get init() {
     const group = game.settings.get(game.system.id, "initiative") !== "group";
 
-    return group ? this.initiative.mod : 0;
+    return group
+      ? (this.initiative.value || 0) + (this.initiative.mod || 0)
+      : 0;
   }
 }

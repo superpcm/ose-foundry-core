@@ -54,9 +54,9 @@ export default ({
       expect(actor?.system.encumbrance.steps).not.undefined;
       expect(actor?.system.encumbrance.value).not.undefined;
       expect(actor?.system.encumbrance.max).not.undefined;
-      expect(actor?.system.encumbrance.atHalfEncumbered).not.undefined;
-      expect(actor?.system.encumbrance.atQuarterEncumbered).not.undefined;
-      expect(actor?.system.encumbrance.atEighthEncumbered).not.undefined;
+      expect(actor?.system.encumbrance.atFirstBreakpoint).not.undefined;
+      expect(actor?.system.encumbrance.atSecondBreakpoint).not.undefined;
+      expect(actor?.system.encumbrance.atThirdBreakpoint).not.undefined;
     });
 
     it("have movement", async () => {
@@ -206,12 +206,12 @@ export default ({
         { type: "container", name: "test container" },
       ]);
       expect(actor?.items.contents.length).equal(1);
+      const container = actor?.items.getName("test container");
+      expect(container).to.not.be.undefined;
+      expect(container?.name).equal("test container");
       expect(actor?.items.contents[0].name).equal("test container");
       // eslint-disable-next-line no-underscore-dangle
-      const itemId = actor?.items.contents[0].id;
-      expect(actor?.system.containers.length).equal(1);
-      // eslint-disable-next-line no-underscore-dangle
-      expect(actor?.system.containers[0]._id).equal(itemId);
+      expect(actor?.system.containers[0]._id).equal(container.id);
       actor?.delete();
     });
 
@@ -229,17 +229,17 @@ export default ({
         { type: "item", name: "test treasure", system: { treasure: true } },
       ]);
       expect(actor?.items.contents.length).equal(1);
-      expect(actor?.items.contents[0].name).equal("test treasure");
-      expect(actor?.items.contents[0].system.treasure).is.true;
-      // eslint-disable-next-line no-underscore-dangle
-      const itemId = actor?.items.contents[0].id;
+      const testTreasure = actor?.items.getName("test treasure");
+      expect(testTreasure).to.not.be.undefined;
+      expect(testTreasure?.name).equal("test treasure");
+      expect(testTreasure?.system.treasure).is.true;
       expect(actor?.system.treasures.length).equal(1);
       // eslint-disable-next-line no-underscore-dangle
-      expect(actor?.system.treasures[0]._id).equal(itemId);
+      expect(actor?.system.treasures[0]._id).equal(testTreasure.id);
       actor?.delete();
     });
 
-    it("doesn't returns treasures on actor if in container", async () => {
+    it("doesn't return treasures on actor if in container", async () => {
       const actor = await createMockActor();
       expect(actor?.items.contents.length).equal(0);
       expect(actor?.system.treasures.length).equal(0);
@@ -248,7 +248,6 @@ export default ({
       ]);
       const container = actor?.items.getName("test container");
       await actor?.createEmbeddedDocuments("Item", [
-        // eslint-disable-next-line no-underscore-dangle
         {
           type: "item",
           name: "test treasure",
@@ -256,11 +255,14 @@ export default ({
         },
       ]);
       expect(actor?.items.contents.length).equal(2);
-      expect(actor?.items.contents[0].name).equal("test container");
-      expect(actor?.items.contents[1].name).equal("test treasure");
-      expect(actor?.items.contents[1].system.treasure).is.true;
-      // eslint-disable-next-line no-underscore-dangle
-      expect(actor?.items.contents[1].system.containerId).equal(container?.id);
+      const testContainer = actor?.items.getName("test container");
+      const testTreasure = actor?.items.getName("test treasure");
+      expect(testContainer).to.not.be.undefined;
+      expect(testContainer?.name).equal("test container");
+      expect(testTreasure).to.not.be.undefined;
+      expect(testTreasure?.name).equal("test treasure");
+      expect(testTreasure?.system.treasure).is.true;
+      expect(testTreasure?.system.containerId).equal(container?.id);
       expect(actor?.system.treasures.length).equal(0);
       actor?.delete();
     });
@@ -271,7 +273,7 @@ export default ({
   });
 
   describe("items()", () => {
-    it("only returns other items than treasure", async () => {
+    it("only returns items other than treasure", async () => {
       const actor = await createMockActor();
       expect(actor?.items.contents.length).equal(0);
       expect(actor?.system.items.length).equal(0);
@@ -287,9 +289,14 @@ export default ({
         },
       ]);
       expect(actor?.items.contents.length).equal(2);
-      expect(actor?.items.contents[0].name).equal("test item");
-      expect(actor?.items.contents[1].name).equal("test treasure");
-      expect(actor?.items.contents[1].system.treasure).is.true;
+      const testItem = actor?.items.getName("test item");
+      const testTreasure = actor?.items.getName("test treasure");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test item");
+      expect(testItem?.system.treasure).is.false;
+      expect(testTreasure).to.not.be.undefined;
+      expect(testTreasure?.name).equal("test treasure");
+      expect(testTreasure?.system.treasure).is.true;
       expect(actor?.system.items.length).equal(1);
       expect(actor?.system.items[0].name).equal("test item");
       actor?.delete();
@@ -319,9 +326,15 @@ export default ({
         },
       ]);
       expect(actor?.items.contents.length).equal(3);
-      expect(actor?.items.contents[0].name).equal("test container");
-      expect(actor?.items.contents[1].name).equal("test item in container");
-      expect(actor?.items.contents[2].name).equal("test item");
+      const testContainer = actor?.items.getName("test container");
+      const testItemInContainer = actor?.items.getName("test item in container");
+      const testItem = actor?.items.getName("test item");
+      expect(testContainer).to.not.be.undefined;
+      expect(testContainer?.name).equal("test container");
+      expect(testItemInContainer).to.not.be.undefined;
+      expect(testItemInContainer?.name).equal("test item in container");
+      expect(testItem).to.not.be.undefined;
+      expect(testItem?.name).equal("test item");
       expect(actor?.system.items.length).equal(1);
       expect(actor?.system.items[0].name).equal("test item");
       actor?.delete();
@@ -344,12 +357,12 @@ export default ({
           { type, name: `test ${type}` },
         ]);
         expect(actor?.items.contents.length).equal(1);
-        expect(actor?.items.contents[0].name).equal(`test ${type}`);
-        // eslint-disable-next-line no-underscore-dangle
-        const itemId = actor?.items.contents[0].id;
+        const item = actor?.items.getName(`test ${type}`);
+        expect(item).to.not.be.undefined;
+        expect(item?.name).equal(`test ${type}`);
         expect(actor?.system[getter].length).equal(1);
         // eslint-disable-next-line no-underscore-dangle
-        expect(actor?.system[getter][0]._id).equal(itemId);
+        expect(actor?.system[getter][0]._id).equal(item.id);
         actor?.delete();
       });
 
@@ -378,16 +391,20 @@ export default ({
           },
         ]);
         expect(actor?.items.contents.length).equal(3);
-        expect(actor?.items.contents[0].name).equal("test container");
-        expect(actor?.items.contents[1].name).equal(
+        const testContainer = actor?.items.getName("test container");
+        const testItemInContainer = actor?.items.getName(
           `test ${type} in container`
         );
-        expect(actor?.items.contents[2].name).equal(`test ${type}`);
-        // eslint-disable-next-line no-underscore-dangle
-        const itemId = actor?.items.contents[2].id;
+        const testItem = actor?.items.getName(`test ${type}`);
+        expect(testContainer).to.not.be.undefined;
+        expect(testContainer?.name).equal("test container");
+        expect(testItemInContainer).to.not.be.undefined;
+        expect(testItemInContainer?.name).equal(`test ${type} in container`);
+        expect(testItem).to.not.be.undefined;
+        expect(testItem?.name).equal(`test ${type}`);
         expect(actor?.system[getter].length).equal(1);
         // eslint-disable-next-line no-underscore-dangle
-        expect(actor?.system[getter][0]._id).equal(itemId);
+        expect(actor?.system[getter][0]._id).equal(testItem.id);
         actor?.delete();
       });
     });
@@ -512,14 +529,11 @@ export default ({
   describe("init()", () => {
     before(async () => {
       await game.settings.set(game.system.id, "initiative", "individual");
-      // @todo: tests fails if scores.dex.init isn't initiated
-      // dataModel.scores.dex = { init: 0 };
     });
 
     it("returns 0 by default", () => {
       expect(dataModel.initiative.value).equal(0);
       expect(dataModel.initiative.mod).equal(0);
-      expect(dataModel.scores.dex.init).equal(0);
       expect(dataModel.init).equal(0);
     });
 
@@ -527,6 +541,7 @@ export default ({
       dataModel.initiative.value = 12;
       expect(dataModel.init).equal(12);
       dataModel.initiative.value = 0;
+      expect(dataModel.init).equal(0);
       expect(dataModel.initiative.value).equal(0);
     });
 
@@ -534,14 +549,19 @@ export default ({
       dataModel.initiative.mod = 10;
       expect(dataModel.init).equal(10);
       dataModel.initiative.mod = 0;
+      expect(dataModel.init).equal(0);
       expect(dataModel.initiative.mod).equal(0);
     });
 
-    it("returns correctly with dex mod init set", async () => {
-      dataModel.scores.dex = { init: 5 };
-      expect(dataModel.init).equal(5);
-      dataModel.scores.dex.init = 0;
-      expect(dataModel.scores.dex.init).equal(0);
+    it("returns correctly with initiative value and mod set", async () => {
+      dataModel.initiative.value = 12;
+      dataModel.initiative.mod = 3;
+      expect(dataModel.init).equal(15);
+      dataModel.initiative.value = 0;
+      dataModel.initiative.mod = 0;
+      expect(dataModel.init).equal(0);
+      expect(dataModel.initiative.value).equal(0);
+      expect(dataModel.initiative.mod).equal(0);
     });
   });
 };
