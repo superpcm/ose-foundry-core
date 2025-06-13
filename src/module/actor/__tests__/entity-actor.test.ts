@@ -20,6 +20,7 @@ import {
   createWorldTestItem,
   delay,
   itemTypes,
+  rollSpecificNumber,
   trashChat,
   waitForInput,
 } from "../../../e2e/testUtils";
@@ -851,7 +852,30 @@ export default ({
     });
 
     // @todo: How to verify if possible to miss, thus obfuscating dmg roll?
-    it("If melee attack, add str mod to damage roll", async () => {});
+    it("If melee attack, add str mod to damage roll", async () => {
+      // Ensure the dice roll is a 10 to make sure the attack is successful
+      const existingRandomFunction = CONFIG.Dice.randomUniform;
+      CONFIG.Dice.randomUniform = () => rollSpecificNumber(10, 20);
+
+      const actor = (await createMockActor("character")) as OseActor;
+      await actor.update({ system: { scores: { str: { value: 18 } } } });
+      expect(game.messages?.size).equal(0);
+      const rolldata = await actor.rollAttack(
+        { roll: {} },
+        { type: "melee", skipDialog: true }
+      );
+      expect(rolldata.formula).equal("1d20 + 3");
+      await waitForInput();
+      expect(game.messages?.size).equal(1);
+      expect(game.messages?.contents[0].content).contain(
+        game.i18n.localize("OSE.messages.InflictsDamage")
+      );
+      expect(game.messages?.contents[0].content).contain("1d6 + 3");
+      await actor.delete();
+
+      // Restore the original random function
+      CONFIG.Dice.randomUniform = existingRandomFunction;
+    });
 
     it("If item provided with a bonus, it is added as bonus to attack roll", async () => {
       const actor = (await createMockActor("character")) as OseActor;
