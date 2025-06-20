@@ -16,13 +16,13 @@ export class OSECombatant extends Combatant {
   }
 
   get isSlow() {
-    return this.actor.system.isSlow;
+    return this.actor?.system?.isSlow;
   }
 
   get isDefeated() {
     if (this.defeated) return true;
 
-    return !this.defeated && this.actor.system.hp.value === 0;
+    return !this.defeated && this.actor?.system?.hp?.value === 0;
   }
 
   // ===========================================================================
@@ -59,20 +59,16 @@ export class OSECombatant extends Combatant {
       return;
     }
 
-    if (!this.combat.groups.find((g) => g.name === group)) {
-      await this.combat.createEmbeddedDocuments(`CombatantGroup`, [{ name: group, initiative: null }]);
-    }
-
-    await this.update({ group: this.combat.groups.find((g) => g.name === group).id });
+    await this.combat.assignGroup(this, group);
   }
 
   /**
-   * Key for the group to which this combatant should belong, or `null` if it can't be grouped.
+   * Key for the group to which this combatant should belong.
    *
-   * @returns {string}
+   * @returns {string} - The group key for this combatant.
    */
-  get groupRaw() {
-    if (this.actor.system.isSlow) {
+  get groupRaw(): string {
+    if (this.actor?.system?.isSlow) {
       return "slow";
     }
 
@@ -88,8 +84,8 @@ export class OSECombatant extends Combatant {
         return "purple";
       case 1:
         return "green";
+      default:
+        return "white";
     }
-
-    return "white";
   }
 }

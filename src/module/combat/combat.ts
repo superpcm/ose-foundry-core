@@ -22,9 +22,16 @@ export class OSECombat extends foundry.documents.Combat {
   static get GROUPS() {
     return {
       ...OSE.colors,
-      ...actionGroups,
+      ...Object.entries(actionGroups).reduce((acc, [key, value]) => {
+        (acc as Record<string, string>)[key] = game.i18n.localize(value);
+        return acc;
+      }, {}),
     };
   }
+
+  // Track combatant groups since multiple combatants can trigger group creation
+  // at the same time.
+  #combatantGroups = new Map<string, Promise<CombatantGroup>>();
 
   get #rerollBehavior() {
     return game.settings.get(game.system.id, "rerollInitiative");
@@ -46,10 +53,16 @@ export class OSECombat extends foundry.documents.Combat {
   /**
    * Roll initiative for all combatants.
    *
-   * @param {boolean} excludeAlreadyRolled - If true, exclude combatants that have already rolled initiative.
+   * @param {object} [options={}] - Additional options which modify how initiative rolls are created or presented.
+   * @param {boolean} [options.excludeAlreadyRolled=false] - If true, exclude combatants that have already rolled initiative.
+   * @param {boolean} [options.updateTurn=false] - Update the Combat turn after adding new initiative scores to
+   *                                               keep the turn on the same Combatant.
    * @private
    */
-  async #rollAbsolutelyEveryone(excludeAlreadyRolled = false) {
+  async #rollAbsolutelyEveryone({
+    excludeAlreadyRolled = false,
+    updateTurn = false,
+  } = {}) {
     const formula = this.isGroupInitiative
       ? OSECombat.GROUP_FORMULA
       : OSECombat.FORMULA;
@@ -60,7 +73,10 @@ export class OSECombat extends foundry.documents.Combat {
           (c) => !c.defeated && (!excludeAlreadyRolled || c.initiative === null)
         )
         .map((c) => c.id),
-      { formula }
+      {
+        formula,
+        updateTurn,
+      }
     );
   }
 
@@ -68,11 +84,17 @@ export class OSECombat extends foundry.documents.Combat {
    * Reroll initiative for all combatants.
    * If the initiative type is set to "group", reroll initiative for each group.
    *
-   * @param {boolean} excludeAlreadyRolled - If true, exclude combatants that have already rolled initiative.
+   * @param {object} [options={}] - Additional options which modify how initiative rolls are created or presented.
+   * @param {boolean} [options.excludeAlreadyRolled=false] - If true, exclude combatants that have already rolled initiative.
+   * @param {boolean} [options.updateTurn=false] - Update the Combat turn after adding new initiative scores to
+   *                                               keep the turn on the same Combatant.
    */
-  async smartRerollInitiative(excludeAlreadyRolled = false) {
+  async smartRerollInitiative({
+    excludeAlreadyRolled = false,
+    updateTurn = false,
+  } = {}) {
     if (!this.isGroupInitiative) {
-      return this.#rollAbsolutelyEveryone(excludeAlreadyRolled);
+      return this.#rollAbsolutelyEveryone({ excludeAlreadyRolled, updateTurn });
     }
 
     const updates = [];
@@ -110,13 +132,31 @@ export class OSECombat extends foundry.documents.Combat {
     }
 
     if (updates.length === 0) {
-      return;
+      return this;
     }
 
     await this.updateEmbeddedDocuments("CombatantGroup", updates);
     // Create multiple chat messages
     await foundry.documents.ChatMessage.implementation.create(messages);
 
+    this.setupTurns();
+    await ui.combat.render(true);
+    return this;
+  }
+
+  /** @override */
+  async rollAll(options: object) {
+    await super.rollAll(options);
+    // Preserve the fact that it's no-one's turn currently.
+    let turn = this.turn === null || this.turns.length === 0 ? null : 0;
+    if (this.settings.skipDefeated && turn !== null) {
+      turn = this.turns.findIndex((t) => !t.isDefeated);
+      if (turn === -1) {
+        ui.notifications.warn("COMBAT.NoneRemaining", { localize: true });
+        turn = 0;
+      }
+    }
+    await this.update({ turn });
     this.setupTurns();
     await ui.combat.render(true);
     return this;
@@ -129,10 +169,16 @@ export class OSECombat extends foundry.documents.Combat {
   /** @override */
   async startCombat() {
     await super.startCombat();
-    if (this.#rerollBehavior !== "reset") await this.smartRerollInitiative(true);
+    if (this.#rerollBehavior !== "reset")
+      await this.smartRerollInitiative({
+        excludeAlreadyRolled: true,
+      });
     return this;
   }
 
+  /**
+   * Reset the actions of all combatants in the combat.
+   */
   async resetActions() {
     for (const combatant of this.combatants) {
       await combatant.setFlag(game.system.id, "prepareSpell", false);
@@ -142,20 +188,24 @@ export class OSECombat extends foundry.documents.Combat {
 
   /** @override */
   async _onEndRound(context: CombatRoundEventContext) {
-    switch (this.#rerollBehavior) {
-      case "reset":
-        await this.resetAll();
-        break;
-      case "reroll":
-        await this.smartRerollInitiative();
-        break;
-      case "keep":
-      default:
-        break;
-    }
     await super._onEndRound(context);
-    await this.resetActions();
-    await this.activateCombatant(0);
+    if (context?.round) {
+      // Further processing when rounds other than round 0 end (start combat).
+      switch (this.#rerollBehavior) {
+        case "reset":
+          await this.resetAll();
+          break;
+
+        case "reroll":
+          await this.smartRerollInitiative();
+          break;
+
+        case "keep":
+        default:
+          break;
+      }
+      await this.resetActions();
+    }
   }
 
   /** @override */
@@ -188,6 +238,36 @@ export class OSECombat extends foundry.documents.Combat {
   }
 
   /**
+   * Assign a combatant to a group, creating the group if it doesn't exist.
+   * This method prevents multiple groups being created due to the async nature
+   * of Foundry VTT.
+   *
+   * @param {OSECombatant} combatant - The combatant to assign to the group.
+   * @param {string} groupName - The name of the group to assign the combatant to.
+   */
+  async assignGroup(combatant: OSECombatant, groupName: string) {
+    if (!groupName) {
+      return;
+    }
+
+    if (this.#combatantGroups.has(groupName)) {
+      await this.#combatantGroups.get(groupName);
+    } else {
+      const groupCreation = this.createEmbeddedDocuments("CombatantGroup", [
+        { name: groupName, initiative: null },
+      ]);
+      this.#combatantGroups.set(groupName, groupCreation);
+      await groupCreation;
+    }
+
+    const group = this.groups.find((g: CombatantGroup) => g.name === groupName);
+    if (!group) {
+      return;
+    }
+    await combatant.update({ group: group.id });
+  }
+
+  /**
    * Determine which group each combatant should be added to, or if a new group should be created.
    *
    * @returns {Map<string, { combatants: OSECombatant[], expanded: boolean }>}
@@ -199,14 +279,7 @@ export class OSECombat extends foundry.documents.Combat {
       const key = combatant.groupRaw;
       if (!key) continue;
 
-      if (!this.groups.find((g) => g.name === key)) {
-        await this.createEmbeddedDocuments("CombatantGroup", [
-          { name: key, initiative: null },
-        ]);
-      }
-      const group = this.groups.find((g) => g.name === key);
-      if (!group) continue;
-      await combatant.update({ group: group.id });
+      await this.assignGroup(combatant, key);
     }
 
     return this.groups;
@@ -268,7 +341,11 @@ export class OSECombat extends foundry.documents.Combat {
       }
     }
 
-    // Fall back to ID comparison
-    return a.id > b.id ? 1 : -1;
+    if (a.name && a.name === b.name) {
+      // Use ID comparison if the names are the same
+      return a.id > b.id ? 1 : -1;
+    }
+
+    return (a.name || "").localeCompare(b.name || "");
   }
 }
