@@ -125,7 +125,9 @@ export default class OseActor extends Actor {
         ...(data.prototypeToken?.actorLink === undefined && {
           actorLink: true,
         }),
-        disposition: foundry.CONST.TOKEN_DISPOSITIONS.FRIENDLY,
+        ...(data.prototypeToken?.disposition === undefined && {
+          disposition: foundry.CONST.TOKEN_DISPOSITIONS.FRIENDLY,
+        }),
       });
     }
     this.updateSource({ prototypeToken });

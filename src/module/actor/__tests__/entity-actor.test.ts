@@ -776,8 +776,8 @@ export default ({
       await actor.delete();
     });
 
-    after(() => {
-      cleanUpScenes();
+    after(async () => {
+      await cleanUpScenes();
     });
   });
 
