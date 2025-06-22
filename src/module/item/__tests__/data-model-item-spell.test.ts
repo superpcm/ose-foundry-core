@@ -53,11 +53,11 @@ export default ({ describe, it, expect }: QuenchMethods) => {
     });
 
     it("Roll create autoTags", () => {
-      spell.roll = "1d20+1";
-      expect(spell.autoTags.length).equal(5);
+      spell.updateSource({ roll: "1d20+1" });
+      expect(spell.autoTags.length).equal(4);
       expect(Object.keys(spell.autoTags[3]).length).equal(1);
       expect(spell.autoTags[3].label).equal(
-        `${game.i18n.localize("OSE.items.Roll")} 1d20+1`
+        `${game.i18n.localize("OSE.items.Roll")} 1d20 + 1`
       );
     });
   });

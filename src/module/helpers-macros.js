@@ -1,7 +1,8 @@
 /**
  * @file Functions that make working with hotbar macros easier
  */
-import {rollTreasure} from "./helpers-treasure";
+import { rollTreasure } from "./helpers-treasure";
+
 /* -------------------------------------------- */
 /*  Hotbar Macros                               */
 /* -------------------------------------------- */

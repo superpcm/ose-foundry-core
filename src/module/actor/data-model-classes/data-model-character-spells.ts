@@ -74,7 +74,7 @@ export default class OseDataModelCharacterSpells implements CharacterSpells {
   #reducedUsedSlots(list: { [n: number]: number }, item: Item) {
     const { lvl } = item.system;
     let { cast } = item.system;
-    if (Number.isNaN(cast)) cast = 0;
+    if (!cast || Number.isNaN(cast)) cast = 0;
     const usedAtLvl = list[lvl] || 0;
     return {
       ...list,

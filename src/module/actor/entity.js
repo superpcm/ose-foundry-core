@@ -13,9 +13,6 @@ const removeFalsyElements = (arr) =>
   arr.reduce((a, b) => (b ? [...a, b] : a), []);
 
 export default class OseActor extends Actor {
-  prepareDerivedData() {
-    if (game.version.startsWith("10")) this.system.prepareDerivedData?.();
-  }
 
   static migrateData(source) {
     // Fixing missing img
@@ -39,6 +36,8 @@ export default class OseActor extends Actor {
     const {
       "system.ac.value": acValue,
       "system.aac.value": aacValue,
+      "system.ac.mod": acMod,
+      "system.aac.mod": aacMod,
       "system.thac0.bba": bbaValue,
       "system.thac0.value": thac0Value,
     } = newData;
@@ -49,6 +48,13 @@ export default class OseActor extends Actor {
       newData["system.ac.value"] = 19 - aacValue;
     }
 
+    // Ensure AAC and AC have the same mod value
+    if (acMod !== undefined) {
+      newData["system.aac.mod"] = acMod;
+    } else if (aacMod !== undefined) {
+      newData["system.ac.mod"] = aacMod;
+    }
+
     // Compute Thac0 from BBA
     if (thac0Value !== undefined) {
       newData["system.thac0.bba"] = 19 - thac0Value;
@@ -56,7 +62,7 @@ export default class OseActor extends Actor {
       newData["system.thac0.value"] = 19 - bbaValue;
     }
 
-    super.update(newData, options);
+    return super.update(newData, options);
   }
 
   async createEmbeddedDocuments(embeddedName, data = [], context = {}) {
@@ -99,6 +105,32 @@ export default class OseActor extends Actor {
 
   isNew() {
     return this.system.isNew;
+  }
+
+  /** @inheritDoc */
+  // eslint-disable-next-line no-underscore-dangle
+  async _preCreate(data, options, user) {
+    // eslint-disable-next-line no-underscore-dangle
+    await super._preCreate(data, options, user);
+
+    // If this Actor came from a Compendium, do not change the values.
+    // eslint-disable-next-line no-underscore-dangle
+    if (this._stats?.compendiumSource?.startsWith("Compendium.")) return;
+
+    // Configure prototype token settings
+    const prototypeToken = {};
+    if (this.type === "character") {
+      Object.assign(prototypeToken, {
+        // Only set actorLink if it's not already defined
+        ...(data.prototypeToken?.actorLink === undefined && {
+          actorLink: true,
+        }),
+        ...(data.prototypeToken?.disposition === undefined && {
+          disposition: foundry.CONST.TOKEN_DISPOSITIONS.FRIENDLY,
+        }),
+      });
+    }
+    this.updateSource({ prototypeToken });
   }
 
   generateSave(hd) {
@@ -210,7 +242,7 @@ export default class OseActor extends Actor {
   }
 
   rollLoyalty(options = {}) {
-    const label = game.i18n.localize(`OSE.roll.loyalty`);
+    const label = game.i18n.localize(`OSE.loyalty`);
     const rollParts = ["2d6"];
 
     const actorData = this.system;
@@ -315,10 +347,16 @@ export default class OseActor extends Actor {
     const actorData = this.system;
 
     const label = game.i18n.localize(`OSE.roll.hd`);
-    const rollParts = [actorData.hp.hd];
-    
+    let rollParts = [actorData.hp.hd];
+
     if (actorType === "character") {
-      rollParts.push(actorData.scores.con.mod * actorData.details.level);
+      // A character always gains at least 1 hit point per Hit Die,
+      // regardless of CON modifier.
+      rollParts = [
+        `max(${actorData.hp.hd} + ${
+          actorData.scores.con.mod * actorData.details.level
+        }, ${actorData.hp.hd[0]})`,
+      ];
     }
 
     const data = {
@@ -350,10 +388,10 @@ export default class OseActor extends Actor {
     let label = "";
     if (options.check === "wilderness") {
       rollParts.push(actorData.details.appearing.w);
-      label = "(2)";
+      label = "2";
     } else {
       rollParts.push(actorData.details.appearing.d);
-      label = "(1)";
+      label = "1";
     }
     const data = {
       actor: this,
@@ -408,7 +446,7 @@ export default class OseActor extends Actor {
     });
   }
 
-  rollDamage(attData, options = {}) {
+  async rollDamage(attData, options = {}) {
     const data = this.system;
 
     const rollData = {
@@ -420,19 +458,19 @@ export default class OseActor extends Actor {
     };
 
     const dmgParts = [];
-    if (attData.roll.dmg) {
+    if (attData.roll?.dmg) {
       dmgParts.push(attData.roll.dmg);
     } else {
       dmgParts.push("1d6");
     }
 
     // Add Str to damage
-    if (attData.roll.type === "melee" && data.scores.str.mod) {
+    if (attData.roll?.type === "melee" && data.scores.str.mod) {
       dmgParts.push(data.scores.str.mod);
     }
 
     // Damage roll
-    OseDice.Roll({
+    return OseDice.Roll({
       event: options.event,
       parts: dmgParts,
       data: rollData,
@@ -476,11 +514,11 @@ export default class OseActor extends Actor {
 
     const label = attData.item
       ? game.i18n.format("OSE.roll.attacksWith", {
-        name: attData.item.name,
-      })
+          name: attData.item.name,
+        })
       : game.i18n.format("OSE.roll.attacks", {
-        name: this.name,
-      });
+          name: this.name,
+        });
 
     const dmgParts = removeFalsyElements([
       // Weapon damage roll value

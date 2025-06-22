@@ -1,13 +1,34 @@
 /**
  * @file The base class we use for Character and Monster sheets. Shared behavior goes here!
  */
-import skipRollDialogCheck from "../helpers-behaviour";
 import OSE from "../config";
 import OseEntityTweaks from "../dialog/entity-tweaks";
+import skipRollDialogCheck from "../helpers-behaviour";
 
-export default class OseActorSheet extends ActorSheet {
-  getData() {
+export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
+  /**
+   * IDs for items on the sheet that have been expanded.
+   * @type {Set<string>}
+   * @protected
+   */
+  _expanded = new Set();
+
+  async getData() {
     const data = foundry.utils.deepClone(super.getData().data);
+    for (const i of this.actor.items) {
+      const isExpanded = this._expanded.has(i.id);
+      i.isExpanded = isExpanded;
+      if (isExpanded) {
+        await i.prepareDerivedData();
+      }
+    }
+    for (const i of data.items) {
+      const isExpanded = this._expanded.has(i.id);
+      i.isExpanded = isExpanded;
+      if (isExpanded) {
+        await i.prepareDerivedData();
+      }
+    }
     data.owner = this.actor.isOwner;
     data.editable = this.actor.sheet.isEditable;
 
@@ -84,10 +105,14 @@ export default class OseActorSheet extends ActorSheet {
 
   _toggleItemSummary(event) {
     event.preventDefault();
-    const itemSummary = event.currentTarget
-      .closest(".item-entry.item")
-      .querySelector(".item-summary");
-    itemSummary.style.display = itemSummary.style.display === "" ? "block" : "";
+    const item = event.currentTarget.closest(".item-entry.item");
+    const itemSummary = item.querySelector(".item-summary");
+    if (itemSummary.classList.contains("expanded")) {
+      this._expanded.delete(item.dataset.itemId);
+    } else {
+      this._expanded.add(item.dataset.itemId);
+    }
+    itemSummary.classList.toggle("expanded");
   }
 
   async _displayItemInChat(event) {
@@ -116,7 +141,7 @@ export default class OseActorSheet extends ActorSheet {
       const containedItems = item.system.itemIds;
       const updateData = containedItems.reduce((acc, val) => {
         // Only create update data for items that still exist on the actor
-        if(this.actor.items.get(val))
+        if (this.actor.items.get(val))
           acc.push({ _id: val, "system.containerId": "" });
         return acc;
       }, []);
@@ -157,18 +182,25 @@ export default class OseActorSheet extends ActorSheet {
   }
 
   async _resetSpells(event) {
-    const spells = $(event.currentTarget)
-      .closest(".inventory.spells")
-      .find(".item-entry");
-    spells.each((_, el) => {
+    const spellsContainer = event.currentTarget.closest(".inventory.spells");
+    const spellElements = spellsContainer.querySelectorAll(".item-entry");
+
+    const updates = [];
+    for (const el of spellElements) {
       const { itemId } = el.dataset;
       const item = this.actor.items.get(itemId);
-      const itemData = item?.system;
-      item.update({
-        _id: item.id,
-        "system.cast": itemData.memorized,
-      });
-    });
+
+      if (item?.system) {
+        updates.push({
+          _id: item.id,
+          "system.cast": item.system.memorized,
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await this.actor.updateEmbeddedDocuments("Item", updates);
+    }
   }
 
   async _rollAbility(event) {
@@ -176,15 +208,15 @@ export default class OseActorSheet extends ActorSheet {
     const itemData = item?.system;
     if (item.type === "weapon") {
       if (this.actor.type === "monster") {
-        item.update({
+        await item.update({
           "system.counter.value": itemData.counter.value - 1,
         });
       }
       item.rollWeapon({ skipDialog: skipRollDialogCheck(event) });
     } else if (item.type == "spell") {
-      item.spendSpell({ skipDialog: skipRollDialogCheck(event) });
+      await item.spendSpell({ skipDialog: skipRollDialogCheck(event) });
     } else {
-      item.rollFormula({ skipDialog: skipRollDialogCheck(event) });
+      await item.rollFormula({ skipDialog: skipRollDialogCheck(event) });
     }
   }
 
@@ -390,40 +422,45 @@ export default class OseActorSheet extends ActorSheet {
     const { itemIds } = targetContainer.system;
     itemIds.push(droppedItem.id);
     const item = this.actor.items.get(droppedItem[0].id);
-    await item.update({ system: { containerId: targetContainer.id } });
     await targetContainer.update({ system: { itemIds } });
+    return item.update({ system: { containerId: targetContainer.id } });
   }
 
   /* -------------------------------------------- */
 
   async _chooseItemType(choices = ["weapon", "armor", "shield", "gear"]) {
-    const templateData = { types: choices };
-    const dlg = await renderTemplate(
+    const templateData = {
+      types: choices.reduce((obj, choice) => {
+        obj[choice] = choice;
+        return obj;
+      }, {}),
+    };
+    const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/items/entity-create.html`,
       templateData
     );
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title: game.i18n.localize("OSE.dialog.createItem"),
+      new foundry.applications.api.DialogV2({
+        window: { title: game.i18n.localize("OSE.dialog.createItem") },
         content: dlg,
-        buttons: {
-          ok: {
+        buttons: [
+          {
+            action: "ok",
             label: game.i18n.localize("OSE.Ok"),
-            icon: '<i class="fas fa-check"></i>',
-            callback: (html) => {
-              resolve({
-                type: html.find('select[name="type"]').val(),
-                name: html.find('input[name="name"]').val(),
-              });
+            icon: "fas fa-check",
+            default: true,
+            callback: (event, button, html) => {
+              resolve(new foundry.applications.ux.FormDataExtended(button.form).object);
             },
           },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
+          {
+            action: "cancel",
+            icon: "fas fa-times",
             label: game.i18n.localize("OSE.Cancel"),
+            callback: () => {},
           },
-        },
-        default: "ok",
+        ],
       }).render(true);
     });
   }
@@ -449,7 +486,7 @@ export default class OseActorSheet extends ActorSheet {
       const itemData = createItem(type);
       if (treasure) itemData.system = { treasure: true };
       // when creating a new spell on the character sheet, we need to set the level
-      if (type === "spell") itemData.system = lvl ? { lvl } : {lvl: 1};
+      if (type === "spell") itemData.system = lvl ? { lvl } : { lvl: 1 };
       return this.actor.createEmbeddedDocuments("Item", [itemData], {});
     }
   }
@@ -543,7 +580,8 @@ export default class OseActorSheet extends ActorSheet {
           icon: "fas fa-code",
           onclick: (event) => this._onConfigureActor(event),
         },
-      ].concat(buttons);
+        ...buttons,
+      ];
     }
     return buttons;
   }

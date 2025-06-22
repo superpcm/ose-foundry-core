@@ -3,7 +3,13 @@
  */
 // eslint-disable-next-line prettier/prettier, import/no-cycle
 import { QuenchMethods } from "../../e2e";
-import { closeDialogs, trashChat, waitForInput } from "../../e2e/testUtils";
+import {
+  closeV2Dialogs,
+  getActiveNotifications,
+  rollSpecificNumber,
+  trashChat,
+  waitForInput,
+} from "../../e2e/testUtils";
 import OseDice from "../helpers-dice";
 
 export const key = "ose.helpers.dice";
@@ -36,12 +42,12 @@ export default ({
   const acSetting = game.settings.get(game.system.id, "ascendingAC");
 
   before(async () => {
-    await ui.notifications?.close();
+    await ui.notifications?.clear();
   });
 
   after(async () => {
     game.settings.set(game.system.id, "ascendingAC", acSetting);
-    await ui.notifications?.render(true);
+    await ui.notifications?.clear();
   });
 
   describe("sendRoll(parts, data, title, flavor, speaker, form, chatMessage)", () => {
@@ -532,19 +538,23 @@ export default ({
     });
 
     it("Missing dmg roll shows notification", async () => {
-      ui.notifications?.close();
+      ui.notifications?.clear();
       const rollData = createMockAttackData();
       rollData.data.roll.dmg = [];
       await OseDice.sendAttackRoll(rollData);
       await waitForInput();
-      const notification = ui.notifications?.queue.pop();
-      expect(ui.notifications?.queue.length).equal(0);
-      expect(notification?.message).equal(
-        "Attack has no damage dice terms; be sure to set the attack's damage"
-      );
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          "Attack has no damage dice terms; be sure to set the attack's damage"
+        );
     });
 
     it("Can roll with single part and single dmg die", async () => {
+      // Ensure the dice roll is a 10 to make sure the attack is successful
+      const existingRandomFunction = CONFIG.Dice.randomUniform;
+      CONFIG.Dice.randomUniform = () => rollSpecificNumber(10, 20);
+
       const rollData = createMockAttackData();
       await OseDice.sendAttackRoll(rollData);
       await waitForInput();
@@ -558,6 +568,9 @@ export default ({
         ".damage-roll .dice-formula"
       )?.innerHTML;
       expect(damageDiceResult).equal("1d6");
+
+      // Restore the original random function
+      CONFIG.Dice.randomUniform = existingRandomFunction;
     });
     afterEach(async () => {
       await trashChat();
@@ -587,16 +600,16 @@ export default ({
         });
         await waitForInput();
         const dialog = document.querySelector(".dialog");
-        expect(dialog?.querySelector(".ok")).not.null;
-        expect(dialog?.querySelector(".magic")).not.null;
-        expect(dialog?.querySelector(".cancel")).not.null;
-        await closeDialogs();
+        expect(dialog?.querySelector("button[data-action='ok']")).not.null;
+        expect(dialog?.querySelector("button[data-action='magic']")).not.null;
+        expect(dialog?.querySelector("button[data-action='cancel']")).not.null;
+        await closeV2Dialogs();
       });
     });
 
     afterEach(async () => {
       await trashChat();
-      await closeDialogs();
+      await closeV2Dialogs();
     });
   });
 
@@ -623,16 +636,16 @@ export default ({
         });
         await waitForInput();
         const dialog = document.querySelector(".dialog");
-        expect(dialog?.querySelector(".ok")).not.null;
-        expect(dialog?.querySelector(".magic")).is.null;
-        expect(dialog?.querySelector(".cancel")).not.null;
-        await closeDialogs();
+        expect(dialog?.querySelector("button[data-action='ok']")).not.null;
+        expect(dialog?.querySelector("button[data-action='magic']")).is.null;
+        expect(dialog?.querySelector("button[data-action='cancel']")).not.null;
+        await closeV2Dialogs();
       });
     });
 
     afterEach(async () => {
       await trashChat();
-      await closeDialogs();
+      await closeV2Dialogs();
       await waitForInput();
     });
   });

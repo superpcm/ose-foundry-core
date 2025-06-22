@@ -53,6 +53,12 @@ import actorSheetMonsterTests, {
   options as actorSheetMonsterOptions,
 } from "../module/actor/__tests__/sheet-monster.test";
 
+// COMBAT TESTING IMPORTS
+import combatTests, {
+  key as combatKey,
+  options as combatOptions,
+} from "../module/combat/__tests__/combat.test";
+
 // DIALOG TESTING IMPORTS
 import actorSheetCharacterDialogModifiersTest, {
   key as actorSheetCharacterDialogModifiersKey,
@@ -207,6 +213,12 @@ Hooks.on("quenchReady", async (quench: Quench) => {
     actorSheetMonsterTests,
     actorSheetMonsterOptions
   );
+
+  /* ------------------------------------------- */
+  /* COMBAT TESTING                              */
+  /* ------------------------------------------- */
+
+  quench.registerBatch(combatKey, combatTests, combatOptions);
 
   /* ------------------------------------------- */
   /* DIALOG TESTING                              */

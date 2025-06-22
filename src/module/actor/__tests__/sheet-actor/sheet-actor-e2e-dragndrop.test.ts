@@ -5,9 +5,11 @@
 import { QuenchMethods } from "../../../../e2e";
 import {
   cleanUpActorsByKey,
+  cleanUpCompendium,
   cleanUpWorldItems,
   createActorTestItem,
   createMockActorKey,
+  createMockCompendium,
   createWorldTestItem,
   itemTypes,
   waitForInput, // eslint-disable-next-line prettier/prettier
@@ -97,7 +99,7 @@ export default ({
       expect(itemElement).not.null;
 
       const event = executeDrag(itemElement);
-      const parsedData = TextEditor.getDragEventData(event);
+      const parsedData = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
       expect(Object.keys(parsedData)).contain("item");
     });
 
@@ -110,28 +112,6 @@ export default ({
   describe("_onDropItem(event, data)", () => {});
 
   describe("_onDragStart(event, data) & _onDrop(event, data) - Containers", () => {
-    // @todo: Move out to outer scope for re-use, potentially testUtils.
-    /* --------------------------------------------- */
-    /* Mock Helper functions                         */
-    /* --------------------------------------------- */
-    const createMockCompendium = async (
-      type: CompendiumCollection.Metadata["type"]
-      // eslint-disable-next-line unicorn/consistent-function-scoping
-    ) =>
-      // eslint-disable-next-line no-undef
-      CompendiumCollection.createCompendium({
-        label: "Test Compendium",
-        name: "testcompendium",
-        type,
-        path: "",
-        private: false,
-        package: "world",
-      });
-
-    // eslint-disable-next-line unicorn/consistent-function-scoping
-    const cleanUpCompendium = async () =>
-      game.packs.get("world.testcompendium")?.deleteCompendium();
-
     /* --------------------------------------------- */
     /* Check Test Helper functions                   */
     /* --------------------------------------------- */
@@ -254,10 +234,10 @@ export default ({
     /* --------------------------------------------- */
     /* Loop over item types                          */
     /* --------------------------------------------- */
-    itemTypes.forEach((itemType) => {
+    for (const itemType of itemTypes) {
       // Skip items that can't be put in a container
-      if (itemType === "spell") return;
-      if (itemType === "ability") return;
+      if (itemType === "spell") continue;
+      if (itemType === "ability") continue;
 
       // Initiate storage of actor, items, and DOM elements
       const documents: DragNDropDocuments = {} as DragNDropDocuments;
@@ -268,6 +248,11 @@ export default ({
 
       describe(`manipulating ${itemType} item type`, () => {
         beforeEach(async () => {
+          await cleanUpActorsByKey(key);
+          await cleanUpCompendium();
+          await cleanUpWorldItems();
+          await waitForInput(); // Wait for cleanup to complete
+
           // Set up actor & compendium
           documents.actor = await createMockActorKey("character", {}, key);
           documents.compendium = await createMockCompendium("Item");
@@ -283,10 +268,16 @@ export default ({
           documents.actor?.sheet?.render(true);
           documents.compendium?.render(true);
           await waitForInput();
+          document
+            .querySelector(
+              `#OseActorSheetCharacter-Actor-${documents.actor.id} nav.sheet-tabs a[data-tab="inventory"]`
+            )
+            ?.click();
+          await waitForInput();
 
           // Record Target DOM
           items.target.itemElement = document.querySelector(
-            `.sheet .inventory li.item[data-item-id="${items.target.item?.id}"]`
+            `#OseActorSheetCharacter-Actor-${documents.actor.id} .inventory li.item[data-item-id="${items.target.item?.id}"]`
           );
         });
 
@@ -304,8 +295,15 @@ export default ({
 
           // Create DOM element
           items.source.itemElement = document.querySelector(
-            `.sheet .inventory li.item[data-item-id="${items.source.item?.id}"]`
+            `#OseActorSheetCharacter-Actor-${documents.actor.id} .inventory li.item[data-item-id="${items.source.item?.id}"]`
           );
+
+          if (!items.target.itemElement?.isConnected) {
+            // Reallocate the target item element
+            items.target.itemElement = document.querySelector(
+              `#OseActorSheetCharacter-Actor-${documents.actor.id} .inventory li.item[data-item-id="${items.target.item?.id}"]`
+            );
+          }
 
           // Perform pre-flight checks
           const sourceItemName = `New Actor Test ${itemType.capitalize()}`;
@@ -330,7 +328,7 @@ export default ({
 
           // Create DOM element
           items.source.itemElement = document.querySelector(
-            `.sidebar-tab[data-tab="items"] li.item[data-document-id="${items.source.item?.id}"]`
+            `#items li.item[data-entry-id="${items.source.item?.id}"]`
           );
 
           // Perform pre-flight checks
@@ -364,7 +362,7 @@ export default ({
 
           // Create DOM element
           items.source.itemElement = document.querySelector(
-            `.compendium li.item[data-document-id="${items.source.item?.id}"]`
+            `.compendium-directory li.item[data-entry-id="${items.source.item?.id}"]`
           );
 
           // Perform pre-flight checks
@@ -384,12 +382,13 @@ export default ({
           dragNDropCasePostflightCheck(documents, items);
         });
 
-        afterEach(async () => {
+        after(async () => {
           await cleanUpActorsByKey(key);
           await cleanUpCompendium();
           await cleanUpWorldItems();
+          await waitForInput(); // Wait for cleanup to complete
         });
       });
-    });
+    }
   });
 };

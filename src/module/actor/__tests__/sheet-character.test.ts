@@ -7,9 +7,11 @@ import {
   cleanUpActorsByKey,
   closeDialogs,
   closeSheets,
+  closeV2Dialogs,
   createMockActorKey,
   delay,
   openDialogs,
+  openV2Dialogs,
   openWindows,
   trashChat,
   waitForInput,
@@ -82,6 +84,10 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
 
       const windows = openWindows("creator");
       expect(windows.length).equal(1);
+
+      for (const window of windows) {
+        await window.close();
+      }
     });
 
     it("clicking on the dices generates scores", async () => {
@@ -104,6 +110,10 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
         const { value } = scoreValue;
         expect(parseInt(value, 10) > 0).equal(true);
       });
+
+      for (const window of windows) {
+        await window.close();
+      }
     });
 
     // @todo: this needs fixing
@@ -117,7 +127,7 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
       const windows = openWindows("creator");
       expect(windows.length).equal(1);
 
-      Object.keys(scores).forEach(async (score) => {
+      for (const score of Object.keys(scores)) {
         $(`.creator div[data-score="${score}"] a.score-roll`).trigger("click");
         await waitForInput();
 
@@ -127,7 +137,7 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
         const { value } = scoreValue;
         expect(parseInt(value, 10) > 0).equal(true);
         scores[score] = parseInt(value, 10);
-      });
+      }
 
       $(`.creator footer button`).trigger("submit");
       await waitForInput();
@@ -144,11 +154,14 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
     // @todo: Gold rolling testing
 
     afterEach(async () => {
+      // Don't delete actors or close windows in bulk, as it interferes with the
+      // tests still running.
       await trashChat();
-      await cleanUpActorsByKey(key);
-      const windows = openWindows("creator");
-      windows.forEach((w) => w.close());
       await delay(300);
+    });
+
+    after(async () => {
+      await cleanUpActorsByKey(key);
     });
   });
 
@@ -190,14 +203,14 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
       actor?.sheet?._chooseLang();
       await waitForInput();
 
-      const dialogs = openDialogs();
+      const dialogs = openV2Dialogs();
       expect(dialogs.length).equal(1);
       dialogs[0].close();
     });
 
     after(async () => {
       await cleanUpActorsByKey(key);
-      await closeDialogs();
+      await closeV2Dialogs();
       await delay(300);
     });
   });
@@ -211,7 +224,7 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
       actor?.sheet?._pushLang(table);
       await waitForInput();
 
-      const dialogs = openDialogs();
+      const dialogs = openV2Dialogs();
       expect(dialogs.length).equal(1);
       dialogs[0].close();
     });
@@ -222,10 +235,10 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
       actor?.sheet?._pushLang(table);
       await delay(220);
 
-      $(`button.ok`).trigger("click");
+      $(`button[data-action="ok"]`).trigger("click");
       await delay(500);
 
-      const dialogs = openDialogs();
+      const dialogs = openV2Dialogs();
       expect(dialogs.length).equal(0);
 
       expect(actor?.system.languages.value.length).equal(1);
@@ -234,7 +247,7 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
 
     after(async () => {
       await cleanUpActorsByKey(key);
-      await closeDialogs();
+      await closeV2Dialogs();
     });
   });
 
@@ -279,7 +292,7 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
       actor?.sheet?.render(true);
       await waitForInput();
 
-      $(`.sheet .profile a[data-action=modifiers]`).trigger("click");
+      $(`.sheet .profile a[data-action="modifiers"]`).trigger("click");
       await delay(200);
 
       const dialogs = openDialogs();
@@ -311,7 +324,7 @@ export default ({ describe, it, expect, after, afterEach }: QuenchMethods) => {
       actor?.sheet?.render(true);
       await waitForInput();
 
-      $(`.sheet .profile a[data-action=gp-cost]`).trigger("click");
+      $(`.sheet .profile a[data-action="gp-cost"]`).trigger("click");
       await delay(200);
 
       const dialogs = openDialogs();

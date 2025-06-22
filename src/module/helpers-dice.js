@@ -33,7 +33,7 @@ const OseDice = {
     }
 
     const roll = new Roll(parts.join("+"), data);
-    await roll.evaluate({allowStrings: true});
+    await roll.evaluate({ allowStrings: true });
 
     // Convert the roll to a chat message and return the roll
     let rollMode = game.settings.get("core", "rollMode");
@@ -57,7 +57,7 @@ const OseDice = {
     return new Promise((resolve) => {
       roll.render().then((r) => {
         templateData.rollOSE = r;
-        renderTemplate(template, templateData).then((content) => {
+        foundry.applications.handlebars.renderTemplate(template, templateData).then((content) => {
           chatData.content = content;
           // Dice So Nice
           if (game.dice3d) {
@@ -69,7 +69,7 @@ const OseDice = {
                 chatData.whisper,
                 chatData.blind
               )
-              .then((displayed) => {
+              .then(() => {
                 if (chatMessage !== false) ChatMessage.create(chatData);
                 resolve(roll);
               });
@@ -99,7 +99,7 @@ const OseDice = {
       total: roll.total,
     };
 
-    const die = roll.terms[0].results[0].result;
+    const die = roll.dice?.[0]?.results?.[0]?.result ?? roll.total;
     // eslint-disable-next-line default-case
     switch (data.roll.type) {
       case "result": {
@@ -209,13 +209,16 @@ const OseDice = {
     result.target = data.roll.thac0;
     const targetActorData = data.roll.target?.actor?.system || null;
 
-    const targetAc = data.roll.target ? targetActorData.ac.value : 9;
-    const targetAac = data.roll.target ? targetActorData.aac.value : 10;
+    const targetAc = data.roll.target ? targetActorData?.ac?.value : 9;
+    const targetAac = data.roll.target ? targetActorData?.aac?.value : 10;
     result.victim = data.roll.target || null;
 
     if (game.settings.get(game.system.id, "ascendingAC")) {
       const attackBonus = 19 - data.roll.thac0;
-      if (this.attackIsSuccess(roll, targetAac, attackBonus) || result.victim == null) {
+      if (
+        this.attackIsSuccess(roll, targetAac, attackBonus) ||
+        result.victim == null
+      ) {
         result.details = game.i18n.format(
           "OSE.messages.AttackAscendingSuccess",
           {
@@ -232,7 +235,10 @@ const OseDice = {
         );
         result.isFailure = true;
       }
-    } else if (this.attackIsSuccess(roll, result.target, targetAc) || result.victim == null) {
+    } else if (
+      this.attackIsSuccess(roll, result.target, targetAc) ||
+      result.victim == null
+    ) {
       // Show result in chat card
       const value = result.target - roll.total;
       result.details = game.i18n.format("OSE.messages.AttackSuccess", {
@@ -331,7 +337,7 @@ const OseDice = {
         templateData.rollOSE = r;
         dmgRoll.render().then((dr) => {
           templateData.rollDamage = dr;
-          renderTemplate(template, templateData).then((content) => {
+          foundry.applications.handlebars.renderTemplate(template, templateData).then((content) => {
             chatData.content = content;
             // 2 Step Dice So Nice
             if (game.dice3d) {
@@ -404,46 +410,54 @@ const OseDice = {
       return OseDice.sendRoll(rollData);
     }
 
-    const buttons = {
-      ok: {
-        label: game.i18n.localize("OSE.Roll"),
-        icon: '<i class="fas fa-dice-d20"></i>',
-        callback: (html) => {
-          rolled = true;
-          rollData.form = html[0].querySelector("form");
-          roll = OseDice.sendRoll(rollData);
-        },
-      },
-      magic: {
-        label: game.i18n.localize("OSE.saves.magic.short"),
-        icon: '<i class="fas fa-magic"></i>',
-        callback: (html) => {
-          rolled = true;
-          rollData.form = html[0].querySelector("form");
-          rollData.parts.push(`${rollData.data.roll.magic}`);
-          rollData.title += ` ${game.i18n.localize("OSE.saves.magic.short")} (${rollData.data.roll.magic
-            })`;
-          roll = OseDice.sendRoll(rollData);
-        },
-      },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
-        label: game.i18n.localize("OSE.Cancel"),
-        callback: (html) => { },
-      },
-    };
-
-    const html = await renderTemplate(template, dialogData);
     let roll;
+
+    const buttons = [
+      {
+        action: "ok",
+        label: game.i18n.localize("OSE.Roll"),
+        icon: "fas fa-dice-d20",
+        callback: (event, button) => {
+          rolled = true;
+          rollData.form = button.form;
+          roll = OseDice.sendRoll(rollData);
+        },
+      },
+      {
+        action: "magic",
+        label: game.i18n.localize("OSE.saves.magic.short"),
+        icon: "fas fa-magic",
+        callback: (event, button) => {
+          rolled = true;
+          rollData.form = button.form;
+          rollData.parts.push(`${rollData.data.roll.magic}`);
+          rollData.title += ` ${game.i18n.localize("OSE.saves.magic.short")} (${
+            rollData.data.roll.magic
+          })`;
+          roll = OseDice.sendRoll(rollData);
+        },
+      },
+      {
+        action: "cancel",
+        icon: "fas fa-times",
+        label: game.i18n.localize("OSE.Cancel"),
+        callback: () => {},
+      },
+    ];
+
+    const html = await foundry.applications.handlebars.renderTemplate(
+      template,
+      dialogData
+    );
 
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title,
+      new foundry.applications.api.DialogV2({
+        window: { title },
         content: html,
         buttons,
         default: "ok",
-        close: () => {
+        submit: () => {
           resolve(rolled ? roll : false);
         },
       }).render(true);
@@ -485,36 +499,39 @@ const OseDice = {
         : OseDice.sendRoll(rollData);
     }
 
-    const buttons = {
-      ok: {
+    let roll;
+
+    const buttons = [
+      {
+        action: "ok",
         label: game.i18n.localize("OSE.Roll"),
-        icon: '<i class="fas fa-dice-d20"></i>',
-        callback: (html) => {
+        icon: "fas fa-dice-d20",
+        callback: (event, button) => {
           rolled = true;
-          rollData.form = html[0].querySelector("form");
+          rollData.form = button.form;
           roll = ["melee", "missile", "attack"].includes(data.roll.type)
             ? OseDice.sendAttackRoll(rollData)
             : OseDice.sendRoll(rollData);
         },
+        default: true,
       },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
+      {
+        action: "cancel",
+        icon: "fas fa-times",
         label: game.i18n.localize("OSE.Cancel"),
-        callback: (html) => { },
+        callback: () => {},
       },
-    };
+    ];
 
-    const html = await renderTemplate(template, dialogData);
-    let roll;
+    const html = await foundry.applications.handlebars.renderTemplate(template, dialogData);
 
     // Create Dialog window
     return new Promise((resolve) => {
-      new Dialog({
-        title,
+      new foundry.applications.api.DialogV2({
+        window: { title },
         content: html,
         buttons,
-        default: "ok",
-        close: () => {
+        submit: () => {
           resolve(rolled ? roll : false);
         },
       }).render(true);

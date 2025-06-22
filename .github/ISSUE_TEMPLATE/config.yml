@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: User Documentation
-    url: https://vtt.red/ose
+    url: https://necroticgnome.github.io/ose-foundry-core/
     about: "Learn how to get started with Old-School Essentials on Foundry VTT."
   - name: Old-School Essentials FVTT Edition Discord Community
     url: https://discord.gg/y6RM86YgNY

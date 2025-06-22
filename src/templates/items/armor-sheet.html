@@ -54,12 +54,8 @@
           <label>{{localize 'OSE.armor.type'}}</label>
           <div class="form-fields">
             <select name="system.type">
-              {{#select system.type}}
               <option value=""></option>
-              {{#each config.armor as |armor a|}}
-              <option value="{{a}}">{{armor}}</option>
-              {{/each}}
-              {{/select}}
+              {{selectOptions config.armor selected=system.type}}
             </select>
           </div>
         </div>
@@ -102,7 +98,7 @@
       </div>
       <div class="description">
         {{editor enriched.description target="system.description"
-        button=true owner=owner editable=editable async=true}}
+        button=true owner=owner editable=editable async=true engine="prosemirror"}}
       </div>
     </div>
   </section>

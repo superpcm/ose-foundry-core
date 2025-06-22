@@ -19,11 +19,11 @@ export type InventoryItemTag = keyof OseConfig["tags"];
 export type EncumbranceOption = keyof OseConfig["encumbranceOptions"];
 export type ApplyDamageOption = keyof OseConfig["apply_damage_options"];
 
-export const OSE = {  
+export const OSE = {
   /** Path for system dist */
   systemPath(): string {
     return `${this.systemRoot}/dist`;
-  },  
+  },
   /** Root path for OSE system */
   get systemRoot(): string {
     return `/systems/${game.system.id}`;
@@ -97,9 +97,9 @@ export const OSE = {
     shield: "OSE.armor.shield",
   },
   apply_damage_options: {
-    selected : "selected",
-    targeted : "targeted",
-    originalTarget : "originalTarget",
+    selected: "selected",
+    targeted: "targeted",
+    originalTarget: "originalTarget",
   },
   colors: {
     green: "OSE.colors.green",

@@ -104,12 +104,12 @@ export default class OseCharacterGpCost extends FormApplication {
    * @param {object} formData - The object of validated form data with which to update the object
    * @private
    */
-  async #updateObject(event, formData) {
+  async _updateObject(event, formData) {
     event.preventDefault();
 
     const speaker = ChatMessage.getSpeaker({ actor: this });
     const templateData = await this.getData();
-    const content = await renderTemplate(
+    const content = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/chat/inventory-list.html`,
       templateData
     );

@@ -247,6 +247,10 @@
 
         .item-summary {
           display: none;
+
+          &.expanded {
+            display: block;
+          }
         }
         .item-description {
           font-size: 13px;
@@ -405,7 +409,7 @@
       }
       .item-controls {
         font-size: 12px;
-        flex-basis: 50px;
+        flex-basis: 60px;
         flex-grow: 0;
         text-align: right;
         margin-right: 4px;
@@ -428,7 +432,7 @@
       }
     }
     .editor {
-      height: 300px;
+      flex: 1 0 300px;
       padding: 4px;
     }
   }

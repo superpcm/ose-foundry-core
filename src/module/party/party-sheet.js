@@ -111,7 +111,6 @@ export default class OsePartySheet extends FormApplication {
       return;
     }
 
-    const { actors } = game;
     const droppedActor = await fromUuid(data.uuid);
 
     this._addActorToParty(droppedActor);
@@ -123,12 +122,8 @@ export default class OsePartySheet extends FormApplication {
   }
 
   async _onDropFolder(event, data) {
-    if (data.documentName !== "Actor") {
-      return;
-    }
-
     const folder = await fromUuid(data.uuid);
-    if (!folder) return;
+    if (folder?.type !== "Actor") return;
 
     this._recursiveAddFolder(folder);
   }
@@ -173,6 +168,7 @@ export default class OsePartySheet extends FormApplication {
       .find(".field-img button[data-action='remove-actor']")
       .click(async (event) => {
         await this._removeActorFromParty(getActor(event));
+        this.render(true);
       });
   }
 }

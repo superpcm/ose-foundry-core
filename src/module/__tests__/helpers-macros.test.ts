@@ -9,12 +9,15 @@ import {
   cleanUpScenes,
   cleanUpWorldItems,
   closeDialogs,
+  closeV2Dialogs,
   createActorTestItem,
   createMockActorKey,
   createMockMacro,
   createMockScene,
   createWorldTestItem,
-  openDialogs,
+  getActiveNotifications,
+  objectIsNotification,
+  openV2Dialogs,
   waitForInput,
 } from "../../e2e/testUtils";
 import { createOseMacro, rollItemMacro } from "../helpers-macros";
@@ -39,23 +42,26 @@ export default ({
 }: QuenchMethods) => {
   before(async () => {
     game?.scenes?.active?.update({ active: false });
-    await ui.notifications?.close();
+    await ui.notifications?.clear();
   });
 
   afterEach(async () => {
-    cleanUpMacros();
-    cleanUpActors();
-    cleanUpWorldItems();
-    cleanUpScenes();
+    await closeV2Dialogs();
+    await cleanUpMacros();
+    await cleanUpActors();
+    await cleanUpWorldItems();
+    await cleanUpScenes();
+    await ui.notifications?.clear();
   });
 
   after(async () => {
-    closeDialogs();
-    cleanUpMacros();
-    cleanUpActors();
-    cleanUpWorldItems();
-    cleanUpScenes();
-    await ui.notifications?.render(true);
+    await closeDialogs();
+    await closeV2Dialogs();
+    await cleanUpMacros();
+    await cleanUpActors();
+    await cleanUpWorldItems();
+    await cleanUpScenes();
+    await ui.notifications?.clear();
   });
 
   describe("createOseMacro(data, slot)", () => {
@@ -80,13 +86,11 @@ export default ({
       const actor = await createMockActor("character");
       const data = { type: actor?.type, uuid: actor?.uuid };
       const macroSlot = 9;
-      expect(ui.notifications?.queue.length).equal(0);
-      await createOseMacro(data, macroSlot);
-      expect(ui.notifications?.queue.length).equal(1);
-      expect(ui.notifications?.queue.pop()?.message).equal(
+      const notification = await createOseMacro(data, macroSlot);
+      expect(objectIsNotification(notification)).equal(true);
+      expect(notification.message).equal(
         game.i18n.localize("OSE.warn.macrosNotAnItem")
       );
-      expect(ui.notifications?.queue.length).equal(0);
       await actor?.delete();
     });
 
@@ -95,13 +99,11 @@ export default ({
       const worldItem = await createWorldTestItem("weapon");
       const data = { type: "Item", uuid: worldItem?.uuid };
       const macroSlot = 9;
-      expect(ui.notifications?.queue.length).equal(0);
-      await createOseMacro(data, macroSlot);
-      expect(ui.notifications?.queue.length).equal(1);
-      expect(ui.notifications?.queue.pop()?.message).equal(
+      const notification = await createOseMacro(data, macroSlot);
+      expect(objectIsNotification(notification)).equal(true);
+      expect(notification.message).equal(
         game.i18n.localize("OSE.warn.macrosOnlyForOwnedItems")
       );
-      expect(ui.notifications?.queue.length).equal(0);
       await actor?.delete();
       await worldItem?.delete();
     });
@@ -149,13 +151,13 @@ export default ({
       await game.user?.update({ character: actor?.id });
       expect(ChatMessage.getSpeaker().scene).is.null;
       expect(ChatMessage.getSpeaker().actor).is.not.null;
-      expect(ui.notifications?.queue.length).equal(0);
-      await rollItemMacro(`New Actor Test ${type.capitalize()}`);
-      expect(ui.notifications?.queue.length).equal(1);
-      expect(ui.notifications?.queue.pop()?.message).equal(
+      const notification = await rollItemMacro(
+        `New Actor Test ${type.capitalize()}`
+      );
+      expect(objectIsNotification(notification)).equal(true);
+      expect(notification.message).equal(
         game.i18n.localize("OSE.warn.macrosNoTokenOwnedInScene")
       );
-      expect(ui.notifications?.queue.length).equal(0);
       await actor?.delete();
     });
 
@@ -168,13 +170,13 @@ export default ({
       await game.user?.update({ character: null });
       expect(ChatMessage.getSpeaker().scene).is.not.null;
       expect(ChatMessage.getSpeaker().actor).is.null;
-      expect(ui.notifications?.queue.length).equal(0);
-      await rollItemMacro(`New Actor Test ${type.capitalize()}`);
-      expect(ui.notifications?.queue.length).equal(1);
-      expect(ui.notifications?.queue.pop()?.message).equal(
+      const notification = await rollItemMacro(
+        `New Actor Test ${type.capitalize()}`
+      );
+      expect(objectIsNotification(notification)).equal(true);
+      expect(notification.message).equal(
         game.i18n.localize("OSE.warn.macrosNoTokenOwnedInScene")
       );
-      expect(ui.notifications?.queue.length).equal(0);
       await actor?.delete();
       await scene?.delete();
     });
@@ -190,13 +192,13 @@ export default ({
       expect(ChatMessage.getSpeaker().actor).is.not.null;
       await rollItemMacro(`New Actor Test ${type.capitalize()}`);
       await waitForInput();
-      expect(openDialogs().length).equal(1);
-      await closeDialogs();
+      expect(openV2Dialogs().length).equal(1);
+      await closeV2Dialogs();
       await actor?.delete();
       await scene?.delete();
     });
 
-    it("Duplicate item creates warning but also craetes rolls", async () => {
+    it("Duplicate item creates warning but also creates rolls", async () => {
       const type = "weapon";
       const actor = await createMockActor("character");
       const scene = await createMockScene();
@@ -204,20 +206,19 @@ export default ({
       await createActorTestItem(actor, type);
       await createActorTestItem(actor, type);
       await game.user?.update({ character: actor?.id });
-      expect(ui.notifications?.queue.length).equal(0);
       await rollItemMacro(`New Actor Test ${type.capitalize()}`);
       await waitForInput();
-      expect(ui.notifications?.queue.length).equal(1);
-      expect(ui.notifications?.queue.pop()?.message).equal(
-        game.i18n.format("OSE.warn.moreThanOneItemWithName", {
-          actorName: actor?.name,
-          itemName: `New Actor Test ${type.capitalize()}`,
-        })
-      );
-      expect(ui.notifications?.queue.length).equal(0);
+      expect(getActiveNotifications().map((li) => li?.textContent?.trim()))
+        .to.be.an("array")
+        .that.includes(
+          game.i18n.format("OSE.warn.moreThanOneItemWithName", {
+            actorName: actor?.name,
+            itemName: `New Actor Test ${type.capitalize()}`,
+          })
+        );
       await waitForInput();
-      expect(openDialogs().length).equal(1);
-      await closeDialogs();
+      expect(openV2Dialogs().length).equal(1);
+      await closeV2Dialogs();
       await actor?.delete();
       await scene?.delete();
     });
@@ -232,14 +233,13 @@ export default ({
       await actor?.items
         .getName(`New Actor Test ${type.capitalize()}`)
         ?.delete();
-      expect(ui.notifications?.queue.length).equal(0);
-      await rollItemMacro(`New Actor Test ${type.capitalize()}`);
+      const notification = await rollItemMacro(
+        `New Actor Test ${type.capitalize()}`
+      );
       await waitForInput();
-      expect(ui.notifications?.queue.length).equal(1);
-      const error = ui.notifications?.queue.pop();
-      expect(ui.notifications?.queue.length).equal(0);
-      expect(error?.type).equal("error");
-      expect(error?.message).equal(
+      expect(objectIsNotification(notification)).equal(true);
+      expect(notification.type).equal("error");
+      expect(notification.message).equal(
         game.i18n.format("OSE.error.noItemWithName", {
           actorName: actor?.name,
           itemName: `New Actor Test ${type.capitalize()}`,

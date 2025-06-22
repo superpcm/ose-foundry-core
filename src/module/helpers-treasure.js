@@ -1,28 +1,30 @@
 /**
  * @file Helper functions related to treasure table rolls
  */
-import OSE from "./config";
+import { OSE } from "./config";
 
 // eslint-disable-next-line import/prefer-default-export
 export const augmentTable = (table, html) => {
   // Treasure Toggle
   const isTreasureTable = Boolean(
-    table.object.getFlag(game.system.id, "treasure")
+    table.document.getFlag(game.system.id, "treasure")
   );
 
-  const treasureTableToggle = $(
-    "<div class='toggle-treasure' title='Toggle Treasure Table'></div>"
-  );
-  treasureTableToggle.toggleClass("active", isTreasureTable);
+  const treasureTableToggle = document.createElement("div");
+  treasureTableToggle.className = "toggle-treasure";
+  treasureTableToggle.title = "Toggle Treasure Table";
+  if (isTreasureTable) {
+    treasureTableToggle.classList.add("active");
+  }
 
-  const head = html.find(".sheet-header");
+  const head = html.querySelector(".sheet-header");
   head.append(treasureTableToggle);
 
-  html.find(".toggle-treasure").click((ev) => {
+  html.querySelector(".toggle-treasure").addEventListener("click", () => {
     const isTreasure = Boolean(
-      table.object.getFlag(game.system.id, "treasure")
+      table.document.getFlag(game.system.id, "treasure")
     );
-    table.object.setFlag(game.system.id, "treasure", !isTreasure);
+    table.document.setFlag(game.system.id, "treasure", !isTreasure);
   });
 
   // Treasure table formatting
@@ -31,27 +33,42 @@ export const augmentTable = (table, html) => {
   }
 
   // Hide irrelevant standard fields
-  html.find(".result-range").hide(); // We only hide this column because the underlying model requires two fields for the range and throw an error if they are missing
-  html.find(".normalize-results").remove();
+  const rangeFields = html.querySelectorAll(".range");
+  rangeFields.forEach((el) => {
+    el.style.display = "none";
+  });
+  const normalizeResults = html.querySelector("button[data-action=normalizeResults]");
+  if (normalizeResults) {
+    normalizeResults.remove();
+  }
 
-  const chanceHeader = html.find(".table-header .result-weight");
-  chanceHeader.text("Chance (%)");
+  const chanceHeader = html.querySelector("thead .weight");
+  if (chanceHeader) chanceHeader.textContent = "Chance (%)";
 
-  const chanceColumn = html.find(".result-weight");
-  chanceColumn.css("flex", "0 0 75px");
+  const chanceColumn = html.querySelectorAll(".weight");
+  chanceColumn.forEach((col) => {
+    col.style.flex = "0 0 75px";
+  });
 
-  const formula = html.find("input[name=formula]");
-  formula.attr("value", "1d100");
-  formula.attr("disabled", true);
+  const formula = html.querySelector("input[name=formula]");
+  if (formula) {
+    formula.value = "1d100";
+    formula.disabled = true;
+  }
 
   // Replace Roll button
-  const roll = `<button class="roll-treasure" type="button"><i class="fas fa-gem"></i> ${game.i18n.localize(
+  const rollButton = document.createElement("button");
+  rollButton.className = "roll-treasure";
+  rollButton.type = "button";
+  rollButton.innerHTML = `<i class="fas fa-gem"></i> ${game.i18n.localize(
     "OSE.table.treasure.roll"
-  )}</button>`;
-  html.find(".sheet-footer .roll").replaceWith(roll);
+  )}`;
 
-  html.find(".roll-treasure").click((ev) => {
-    rollTreasure(table.object, { event: ev });
+  const footerRoll = html.querySelector(".form-footer [data-action='drawResult']");
+  footerRoll.replaceWith(rollButton);
+
+  rollButton.addEventListener("click", (ev) => {
+    rollTreasure(table.document, { event: ev });
   });
 };
 
@@ -68,27 +85,29 @@ async function drawTreasure(table, data) {
   };
   data.treasure = {};
   if (table.getFlag(game.system.id, "treasure")) {
-    table.results.forEach(async (r) => {
+    for (const r of table.results) {
       if (await percent(r.weight)) {
-        const text = r.getChatText(r);
+        const text = await r.getHTML();
         data.treasure[r.id] = {
           img: r.img,
-          text: await TextEditor.enrichHTML(text, { async: true }),
+          text: await foundry.applications.ux.TextEditor.implementation.enrichHTML(text, { async: true }),
         };
+        const parsedUuid = foundry.utils.parseUuid(r.documentUuid);
+        const documentCollection = parsedUuid?.collection?.metadata?.id ?? parsedUuid?.documentType ?? "";
         if (
           r.type === CONST.TABLE_RESULT_TYPES.DOCUMENT &&
-          r.collection === "RollTable"
+          documentCollection === "RollTable"
         ) {
-          const embeddedTable = game.tables.get(r.resultId);
+          const embeddedTable = await fromUuid(r.documentUuid);
           await drawTreasure(embeddedTable, data.treasure[r.id]);
         }
       }
-    });
+    };
   } else {
     const { results } = await table.roll();
-    results.forEach((s) => {
-      data.treasure[s.id] = { img: s.img, text: s.text };
-    });
+    for (const s of results) {
+      data.treasure[s.id] = { img: s.img, text: await s.getHTML() };
+    };
   }
   return data;
 }
@@ -118,9 +137,9 @@ export async function rollTreasure(table, options = {}) {
       }
     });
   }
-  
+
   await new Promise(resolve => requestAnimationFrame(resolve));
-  const html = await renderTemplate(
+  const html = await foundry.applications.handlebars.renderTemplate(
     `${OSE.systemPath()}/templates/chat/roll-treasure.html`,
     templateData
   );

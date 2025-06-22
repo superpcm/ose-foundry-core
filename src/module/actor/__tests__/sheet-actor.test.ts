@@ -7,15 +7,15 @@ import { QuenchMethods } from "../../../e2e";
 import {
   cleanUpActorsByKey,
   cleanUpMacros,
-  closeDialogs,
   closeSheets,
+  closeV2Dialogs,
   createActorTestItem,
   createMockActorKey,
   createMockMacro,
   createWorldTestItem,
   delay,
   itemTypes,
-  openDialogs,
+  openV2Dialogs,
   openWindows,
   trashChat,
   waitForInput,
@@ -59,7 +59,7 @@ export default ({
   expect,
   after,
   afterEach,
-  before
+  before,
 }: QuenchMethods) => {
   // Saving settings being modified by tests
   const originalCtrlSetting = game.settings.get(
@@ -85,7 +85,7 @@ export default ({
         key
       )) as OseActor;
       const sheet = new OseActorSheet(actor);
-      const data = sheet.getData();
+      const data = await sheet.getData();
 
       expect(data.owner).equal(actor?.isOwner);
       expect(data.editable).equal(actor?.sheet?.isEditable);
@@ -137,16 +137,22 @@ export default ({
 
         // Setup what to click
         const clickElement = document.querySelector(`${tab} .item-name`);
-        const descriptionStyle =
-          clickElement?.parentElement?.nextElementSibling?.style;
-        expect(descriptionStyle.display).equal("");
+        const descriptionElement =
+          clickElement?.parentElement?.nextElementSibling;
+        expect([...descriptionElement?.classList])
+          .to.be.an("array")
+          .that.does.not.include("expanded");
 
         // Mock event
-        $(`${tab} .item-name`).trigger("click");
+        document
+          .querySelector(`${tab} .item-name`)
+          ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
         await delay(200);
 
         // Verify method
-        expect(descriptionStyle.display).equal("block");
+        expect([...descriptionElement?.classList])
+          .to.be.an("array")
+          .that.includes("expanded");
 
         // Cleanup
         await actor?.delete();
@@ -155,15 +161,17 @@ export default ({
       after(async () => {
         await cleanUpActorsByKey(key);
         await closeSheets();
+        await delay(220);
       });
     });
   });
 
-  // @todo: Introduce Extended from dnd5e/PF2e
   describe("_toggleItemCategory(event)", () => {
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickCategory = async () => {
-      $(".tab[data-tab=inventory] .item-category-title").trigger("click");
+      document
+        .querySelector(".tab[data-tab='inventory'] .item-category-title")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await delay(220);
     };
 
@@ -182,7 +190,7 @@ export default ({
       const sheets = openWindows("sheet");
       expect(sheets.length).equal(1);
       const categoryElement = document.querySelector(
-        ".tab[data-tab=inventory] .item-list"
+        ".tab[data-tab='inventory'] .item-list"
       );
       expect(categoryElement?.style.display).equal("");
       await clickCategory();
@@ -193,7 +201,7 @@ export default ({
       const sheets = openWindows("sheet");
       expect(sheets.length).equal(1);
       const categoryElement = document.querySelector(
-        ".tab[data-tab=inventory] .item-list"
+        ".tab[data-tab='inventory'] .item-list"
       );
       expect(categoryElement?.style.display).equal("none");
       await clickCategory();
@@ -203,13 +211,16 @@ export default ({
     after(async () => {
       await cleanUpActorsByKey(key);
       await closeSheets();
+      await delay(220);
     });
   });
 
   describe("_toggleContainedItems(event)", () => {
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickContainerCaret = async () => {
-      $(".tab[data-tab=inventory] .container .category-caret").trigger("click");
+      document
+        .querySelector(".tab[data-tab='inventory'] .container .category-caret")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await delay(220);
     };
 
@@ -219,7 +230,6 @@ export default ({
       await createActorTestItem(actor, "weapon");
       const weapon = actor?.items.getName("New Actor Test Weapon");
       const container = actor?.items.getName("New Actor Test Container");
-      // eslint-disable-next-line no-underscore-dangle
       await weapon?.update({ system: { containerId: container?.id } });
       actor?.sheet?.render(true);
     });
@@ -236,7 +246,7 @@ export default ({
         actor?.items.getName("New Actor Test Weapon")?.system.containerId
       ).equal(container?.id);
       const containerElement = document.querySelector(
-        ".tab[data-tab=inventory] .container .contained-items"
+        ".tab[data-tab='inventory'] .container .contained-items"
       );
       expect(containerElement?.style.display).equal("");
 
@@ -256,7 +266,7 @@ export default ({
         actor?.items.getName("New Actor Test Weapon")?.system.containerId
       ).equal(container?.id);
       const containerElement = document.querySelector(
-        ".tab[data-tab=inventory] .container .contained-items"
+        ".tab[data-tab='inventory'] .container .contained-items"
       );
 
       expect(containerElement?.style.display).equal("none");
@@ -273,8 +283,23 @@ export default ({
   describe("_toggleItemSummary(event)", () => {
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickItemSummary = async (tab: string) => {
-      $(`${tab} .item-name`).trigger("click");
-      await delay(220);
+      const actor = await getActor();
+      document
+        .querySelector(
+          `#OseActorSheetCharacter-Actor-${actor.id} section .tab[data-tab="${tab}"] .item-name`
+        )
+        ?.click();
+      await delay(320);
+    };
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    const clickNavTab = async (tab: string) => {
+      const actor = await getActor();
+      document
+        .querySelector(
+          `#OseActorSheetCharacter-Actor-${actor.id} nav.sheet-tabs a[data-tab="${tab}"]`
+        )
+        ?.click();
+      await delay(120);
     };
 
     before(async () => {
@@ -284,24 +309,25 @@ export default ({
       await delay(220);
     });
 
-    itemTypes.forEach(async (itemType) => {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const itemType of itemTypes) {
       let tab = "";
       switch (itemType) {
         // eslint-disable-next-line switch-case/no-case-curly
         case "spell": {
-          tab = ".tab[data-tab=spells]";
+          tab = "spells";
           break;
         }
 
         // eslint-disable-next-line switch-case/no-case-curly
         case "ability": {
-          tab = ".tab[data-tab=abilities]";
+          tab = "abilities";
           break;
         }
 
         // eslint-disable-next-line switch-case/no-case-curly
         default: {
-          tab = ".tab[data-tab=inventory]";
+          tab = "inventory";
         }
       }
 
@@ -314,31 +340,47 @@ export default ({
         it("clicking item name will show the content", async () => {
           const sheets = openWindows("sheet");
           expect(sheets.length).equal(1);
+          await clickNavTab(tab);
 
           const actor = await getActor();
           expect(actor?.items.size).equal(1);
 
-          const summaryElement = document.querySelector(`${tab} .item-summary`);
-          expect(summaryElement?.style.display).equal("");
+          const summaryElement = document.querySelector(
+            `#OseActorSheetCharacter-Actor-${actor.id} section .tab[data-tab="${tab}"] .item-summary`
+          );
+          expect([...summaryElement?.classList])
+            .to.be.an("array")
+            .that.does.not.include("expanded");
 
           await clickItemSummary(tab);
-          expect(summaryElement?.style.display).equal("block");
+          expect([...summaryElement?.classList])
+            .to.be.an("array")
+            .that.includes("expanded");
         });
         it("clicking item name again will hide the content", async () => {
           const sheets = openWindows("sheet");
           expect(sheets.length).equal(1);
+          await clickNavTab(tab);
 
           const actor = await getActor();
           expect(actor?.items.size).equal(1);
 
-          const summaryElement = document.querySelector(`${tab} .item-summary`);
-          expect(summaryElement?.style.display).equal("block");
+          const summaryElement = document.querySelector(
+            `#OseActorSheetCharacter-Actor-${actor.id} section .tab[data-tab="${tab}"] .item-summary`
+          );
+          expect([...summaryElement?.classList])
+            .to.be.an("array")
+            .that.includes("expanded");
           await clickItemSummary(tab);
-          expect(summaryElement?.style.display).equal("");
+          expect([...summaryElement?.classList])
+            .to.be.an("array")
+            .that.does.not.include("expanded");
         });
         it("item containing description still shows the summary", async () => {
-          // @todo: This fails, as updated item re-renders the sheet,
-          //        and it collapses the summary
+          const sheets = openWindows("sheet");
+          expect(sheets.length).equal(1);
+          await clickNavTab(tab);
+
           const actor = await getActor();
           const item = actor?.items.getName(
             `New Actor Test ${itemType.capitalize()}`
@@ -349,12 +391,18 @@ export default ({
           await waitForInput();
           expect(item?.system.description).equal("hello world");
 
-          const summaryElement = document.querySelector(`${tab} .item-summary`);
+          const summaryElement = document.querySelector(
+            `#OseActorSheetCharacter-Actor-${actor.id} section .tab[data-tab="${tab}"] .item-summary`
+          );
           expect(summaryElement?.innerHTML.indexOf("hello world") >= 0).is.true;
 
           await item?.update({ system: { description: "" } });
         });
         it("item containing macro reference still shows the summary, Issue #353", async () => {
+          const sheets = openWindows("sheet");
+          expect(sheets.length).equal(1);
+          await clickNavTab(tab);
+
           const macro = await createMockMacro();
           const macroReference = `<p>@UUID[${macro?.uuid}]{Mock Macro}</p>`;
 
@@ -365,22 +413,25 @@ export default ({
           await item?.update({ system: { description: macroReference } });
           await waitForInput();
 
-          const summaryElement = document.querySelector(`${tab} .item-summary`);
-          expect(summaryElement?.innerHTML).equal("");
-          expect(summaryElement?.innerHTML.indexOf(macroReference) >= 0).true;
+          const summaryElement = document.querySelector(
+            `#OseActorSheetCharacter-Actor-${actor.id} section .tab[data-tab="${tab}"] .item-summary`
+          );
+          expect(summaryElement).is.not.null;
+          expect(summaryElement?.querySelector(`a[data-uuid="${macro?.uuid}"]`))
+            .is.not.null;
           await macro?.delete();
           await item?.update({ system: { description: "" } });
         });
 
         after(async () => {
           const actor = await getActor();
-          actor?.items.forEach(async (i) => {
+          actor?.items.forEach(async (i: OseItem) => {
             await i.delete();
           });
           await cleanUpMacros();
         });
       });
-    });
+    }
 
     after(async () => {
       await cleanUpActorsByKey(key);
@@ -390,8 +441,11 @@ export default ({
 
   // @todo: Refactor to entity and just use event parsing in sheet
   describe("_displayItemInChat(event)", () => {
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickItemShow = async (tab: string) => {
-      $(`${tab} .item-show`).trigger("click");
+      document
+        .querySelector(`${tab} .item-show`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await delay(220);
     };
 
@@ -407,19 +461,19 @@ export default ({
       switch (itemType) {
         // eslint-disable-next-line switch-case/no-case-curly
         case "spell": {
-          tab = ".tab[data-tab=spells]";
+          tab = ".tab[data-tab='spells']";
           break;
         }
 
         // eslint-disable-next-line switch-case/no-case-curly
         case "ability": {
-          tab = ".tab[data-tab=abilities]";
+          tab = ".tab[data-tab='abilities']";
           break;
         }
 
         // eslint-disable-next-line switch-case/no-case-curly
         default: {
-          tab = ".tab[data-tab=inventory]";
+          tab = ".tab[data-tab='inventory']";
         }
       }
 
@@ -434,7 +488,7 @@ export default ({
         expect(game.messages?.contents[0]?.content).contain(
           `New Actor Test ${itemType.capitalize()}`
         );
-        actor?.items.forEach((i) => i.delete());
+        actor?.items.forEach((i: OseItem) => i.delete());
       });
 
       after(async () => {
@@ -542,11 +596,17 @@ export default ({
   });
   // @todo: Refactor to entity and just use event parsing in sheet
   describe("_useConsumable(event, decrement)", () => {
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickConsumableEmpty = async () =>
-      $(`.tab[data-tab=inventory] .empty-mark`).trigger("click");
+      document
+        .querySelector(`.tab[data-tab="inventory"] .empty-mark`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickConsumableFull = async () =>
-      $(`.tab[data-tab=inventory] .full-mark`).trigger("click");
+      document
+        .querySelector(`.tab[data-tab="inventory"] .full-mark`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     before(async () => {
       const actor = await createMockActorKey("character", {}, key);
@@ -554,7 +614,7 @@ export default ({
       await waitForInput();
 
       const item = actor?.items.contents[0];
-      item?.update({ system: { quantity: { max: 6, value: 3 } } });
+      await item?.update({ system: { quantity: { max: 6, value: 3 } } });
       await waitForInput();
 
       actor?.sheet?.render(true);
@@ -593,9 +653,13 @@ export default ({
       actor?.sheet?.render(true);
     });
 
-    // @todo: How to properly mock updating a field here?
     it("changing the input for cast changes spell cast data", async () => {
-      $("input[data-field=cast]").val(3);
+      const element = document.querySelector("input[data-field='cast']");
+      expect(element).is.not.null;
+      if (element) {
+        element.value = 3;
+        element.dispatchEvent(new Event("change"));
+      }
       await waitForInput();
 
       const actor = await getActor();
@@ -603,9 +667,13 @@ export default ({
       expect(item?.system.cast).equal(3);
     });
 
-    // @todo: How to properly mock updating a field here?
     it("changing the input for memorize changes spell memorize data", async () => {
-      $("input[data-field=cast]").val(3);
+      const element = document.querySelector("input[data-field='memorize']");
+      expect(element).is.not.null;
+      if (element) {
+        element.value = 3;
+        element.dispatchEvent(new Event("change"));
+      }
       await waitForInput();
 
       const actor = await getActor();
@@ -615,6 +683,7 @@ export default ({
 
     after(async () => {
       await cleanUpActorsByKey(key);
+      await delay(300);
     });
   });
 
@@ -625,14 +694,19 @@ export default ({
       await actor?.update({ system: { spells: { enabled: true } } });
       await createActorTestItem(actor, "spell");
       await waitForInput();
-      actor?.items.contents[0].update({ system: { cast: 1, memorized: 3 } });
+      await actor?.items.contents[0].update({
+        system: { cast: 1, memorized: 3 },
+      });
       actor?.sheet?.render(true);
     });
 
     it("resetting spells resets the cast field to maximum", async () => {
       const actor = await getActor();
-
-      $("a[data-action=reset-spells]").trigger("click");
+      document
+        .querySelector(
+          `#OseActorSheetCharacter-Actor-${actor.id} a[data-action='reset-spells']`
+        )
+        ?.click();
       await waitForInput();
 
       expect(actor?.items.contents[0].system.cast).equal(
@@ -646,16 +720,17 @@ export default ({
   });
 
   // @todo: Refactor to entity and just use event parsing in sheet
-  // @todo: Localization when checking content of chat cards.
   describe("_rollAbility(event) ", () => {
     // eslint-disable-next-line unicorn/consistent-function-scoping
     const mockClickItem = async (tab: string) => {
-      $(`.tab[data-tab=${tab}] .item-image`).trigger("click");
+      document
+        .querySelector(`.tab[data-tab="${tab}"] .item-image`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await delay(220);
     };
 
     before(async () => {
-      game.settings.set(game.system.id, "invertedCtrlBehavior", true);
+      await game.settings.set(game.system.id, "invertedCtrlBehavior", true);
       await trashChat();
     });
 
@@ -683,7 +758,9 @@ export default ({
       // Verification
       expect(game.messages?.size).equal(1);
       expect(game.messages?.contents[0].content).contain(
-        "<h2>Attacks with New Actor Test Weapon</h2>"
+        `<h2>${game.i18n.format("OSE.roll.attacksWith", {
+          name: "New Actor Test Weapon",
+        })}</h2>`
       );
       expect(actor?.items.contents[0].system.counter.value).equal(2);
     });
@@ -702,10 +779,11 @@ export default ({
       await mockClickItem("inventory");
 
       // Verification
-      // @todo: i18n
       expect(game.messages?.size).equal(1);
       expect(game.messages?.contents[0].content).contain(
-        "<h2>Attacks with New Actor Test Weapon</h2>"
+        `<h2>${game.i18n.format("OSE.roll.attacksWith", {
+          name: "New Actor Test Weapon",
+        })}</h2>`
       );
     });
 
@@ -750,7 +828,9 @@ export default ({
       // Verification
       expect(game.messages?.size).equal(1);
       expect(game.messages?.contents[0].content).contain(
-        "<h2>New Actor Test Ability roll</h2>"
+        `<h2>${game.i18n.format("OSE.roll.formula", {
+          label: "New Actor Test Ability",
+        })}</h2>`
       );
     });
 
@@ -782,8 +862,11 @@ export default ({
   describe("_rollSave(event)", () => {
     const saves = ["death", "wand", "paralysis", "breath", "spell"];
 
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickSave = async (save: string) => {
-      $(`li[data-save=${save}] a`).trigger("click");
+      document
+        .querySelector(`li[data-save="${save}"] a`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await delay(220);
     };
 
@@ -791,7 +874,7 @@ export default ({
       before(async () => {
         const actor = await createMockActorKey("character", {}, key);
         await actor?.sheet?.render(true);
-        game.settings.set(game.system.id, "invertedCtrlBehavior", true);
+        await game.settings.set(game.system.id, "invertedCtrlBehavior", true);
         await trashChat();
         await delay(200);
       });
@@ -850,13 +933,16 @@ export default ({
   // @todo: Refactor to entity and just use event parsing in sheet
   describe("_rollAttack(event)", () => {
     const attackTypeClasses = ["melee", "missile"];
+    // eslint-disable-next-line unicorn/consistent-function-scoping
     const clickAttack = async (attack: string) => {
-      $(`li[data-attack=${attack}] a`).trigger("click");
+      document
+        .querySelector(`li[data-attack="${attack}"] a`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await delay(200);
     };
 
     before(async () => {
-      game.settings.set(game.system.id, "invertedCtrlBehavior", true);
+      await game.settings.set(game.system.id, "invertedCtrlBehavior", true);
       const actor = await createMockActorKey("character", {}, key);
       actor?.sheet?.render(true);
       await trashChat();
@@ -1098,13 +1184,14 @@ export default ({
       actor?.sheet?._chooseItemType();
       await waitForInput();
 
-      const dialogs = openDialogs();
+      const dialogs = openV2Dialogs();
       expect(dialogs.length).equal(1);
 
       defaultChoices.forEach((choice) => {
-        expect(dialogs[0].data.content).contain(`<option value="${choice}"`);
+        expect(dialogs[0]?.element.querySelector(`option[value="${choice}"]`))
+          .is.not.null;
       });
-      await dialogs[0].close();
+      await dialogs[0]?.close();
     });
 
     it("can create custom dialog", async () => {
@@ -1114,24 +1201,25 @@ export default ({
       actor?.sheet?._chooseItemType(customChoices);
       await waitForInput();
 
-      const dialogs = openDialogs();
+      const dialogs = openV2Dialogs();
       expect(dialogs.length).equal(1);
 
       customChoices.forEach((choice) => {
-        expect(dialogs[0].data.content).contain(`<option value="${choice}"`);
+        expect(dialogs[0]?.element.querySelector(`option[value="${choice}"]`))
+          .is.not.null;
       });
-      await dialogs[0].close();
+      await dialogs[0]?.close();
     });
 
     afterEach(async () => {
-      await closeDialogs();
+      await closeV2Dialogs();
       await cleanUpActorsByKey(key);
     });
   });
 
   // @todo: Refactor to entity and just use event parsing in sheet
   describe("_createItem(event)", () => {
-    itemTypes.forEach((itemType) => {
+    for (const itemType of itemTypes) {
       it(`can create ${itemType}`, async () => {
         const actor = await createMockActorKey("character", {}, key);
         await actor?.update({ system: { spells: { enabled: true } } });
@@ -1139,21 +1227,35 @@ export default ({
         await delay(200);
         expect(actor?.items.size).equal(0);
 
-        $(`.sheet .item-create[data-type="${itemType}"]`).trigger("click");
+        let selector = `.sheet .item-create[data-type="${itemType}"]`;
+        // Treasure is also an item, so we need to use a different selector
+        if (itemType === "item") {
+          selector += `:not([data-treasure="true"]`;
+        } else if (itemType === "treasure") {
+          selector = `.sheet .item-create[data-type="item"][data-treasure="true"]`;
+        }
+        document
+          .querySelector(selector)
+          ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
         await waitForInput();
 
         expect(actor?.items.size).equal(1);
+        const item: OseItem = actor?.items.contents[0];
+        expect(item).not.undefined;
+        expect(item?.type).equal(itemType);
       });
-    });
+    }
 
     afterEach(async () => {
       await cleanUpActorsByKey(key);
+      await waitForInput();
     });
   });
 
   // @todo: Refactor to entity and just use event parsing in sheet
   describe("_updateItemQuantity(event)", () => {
     const updateQuantity = (element: HTMLInputElement, modifier: number) => {
+      // eslint-disable-next-line no-param-reassign
       element.value = String(parseInt(element.value, 10) + modifier);
       const event = new InputEvent("change");
       element.dispatchEvent(event);
@@ -1166,7 +1268,7 @@ export default ({
         actor,
         "item"
       )) as unknown as OseItem;
-      item.update({ system: { quantity: { value: 2, max: 4 } } });
+      await item.update({ system: { quantity: { value: 2, max: 4 } } });
       await waitForInput();
 
       const quantityElement = document.querySelector(
@@ -1186,7 +1288,7 @@ export default ({
         actor,
         "item"
       )) as unknown as OseItem;
-      item.update({ system: { quantity: { value: 2, max: 4 } } });
+      await item.update({ system: { quantity: { value: 2, max: 4 } } });
       await waitForInput();
 
       const quantityElement = document.querySelector(
@@ -1201,6 +1303,7 @@ export default ({
 
     afterEach(async () => {
       await cleanUpActorsByKey(key);
+      await delay(300);
     });
   });
 
@@ -1209,26 +1312,36 @@ export default ({
   // @todo: How to test?
   describe("_onResize(event)", () => {});
 
-  // @todo: Dose this work now?
   describe("_onConfigureActor(event)", () => {
-    ["character", "monster"].forEach((actorType) => {
+    for (const actorType of ["character", "monster"]) {
       it(`Entity Tweaks renders for ${actorType}`, async () => {
-        const actor = await createMockActorKey("character", {}, key);
+        const actor = await createMockActorKey(actorType, {}, `${key} ${actorType}`);
         await actor?.sheet?.render(true);
-        await delay(300);
+        // Wait for sheet to render - the header buttons are not available for the first 500ms
+        await delay(600);
 
-        $(`.configure-actor`).trigger("click");
-        await delay(300);
+        document
+          .querySelector(
+            `#OseActorSheet${actorType.capitalize()}-Actor-${actor?.id} .configure-actor`
+          )
+          ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await waitForInput();
 
         const windows = openWindows("sheet-tweaks");
-        expect(windows.length).equal(1);
-        windows[0].close();
+        const w = windows.filter(
+          (win) => win.object?.name === `Test Actor ${key} ${actorType}`
+        );
+        expect(w.length).equal(1);
+        const windowElement = w?.[0]?.element?.[0];
+        expect(windowElement).not.undefined;
+        expect(
+          windowElement.querySelector("h4.window-title").innerHTML
+        ).to.include(`Test Actor ${key} ${actorType}`);
+        // eslint-disable-next-line no-restricted-syntax
+        await w?.[0]?.close();
+        await actor?.delete();
       });
-    });
-
-    afterEach(async () => {
-      await cleanUpActorsByKey(key);
-    });
+    }
   });
 
   // @todo: How to test?

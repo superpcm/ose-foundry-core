@@ -3,11 +3,7 @@
         <label>{{localize 'OSE.Language'}}</label>
         <div class="form-fields">
             <select name="choice">
-                {{#select choices}}
-                {{#each choices as |label mode|}}
-                <option value="{{mode}}">{{label}}</option>
-                {{/each}}
-                {{/select}}
+                {{selectOptions choices}}
             </select>
         </div>
     </div>

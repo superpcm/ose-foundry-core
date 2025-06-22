@@ -3,48 +3,52 @@
  */
 import OSE from "./config";
 
-export const RenderCompendium = async (object, html, d) => {
-  if (object.metadata.type !== "Item") {
+/**
+ * Called when a compendium directory is rendered
+ *
+ * @param {foundry.applications.sidebar.tabs.DocumentDirectory} object - The compendium directory object
+ */
+export const RenderCompendium = async (object) => {
+  if (object.documentName !== "Item") {
     return;
   }
 
-  const render = html[0].querySelectorAll(".item");
-  const docs = await d.collection.getDocuments();
+  const html = object.element;
+  const render = html.querySelectorAll(".item");
+  const content = await object.collection.getDocuments();
 
-  render.forEach(async (item, i) => {
-    const id = render[i].dataset.documentId;
-
-    const element = docs.find((doc) => doc.id === id);
-    const tagTemplate = $.parseHTML(
-      await renderTemplate(
-        `${OSE.systemPath()}/templates/actors/partials/item-auto-tags-partial.html`,
-        { tags: element.system.autoTags }
-      )
+  for (const item of render) {
+    const foundryDocument = content.find(
+      (e) => e.id === item.dataset.entryId
     );
 
-    $(item).append(tagTemplate);
-  });
+    const tagsHtml = await foundry.applications.handlebars.renderTemplate(
+      `${OSE.systemPath()}/templates/actors/partials/item-auto-tags-partial.html`,
+      { tags: foundryDocument.system.autoTags || [] }
+    );
+    item.insertAdjacentHTML("beforeend", tagsHtml);
+  }
 };
 
-export const RenderDirectory = async (object, html) => {
-  if (object.id !== "items") {
-    return;
-  }
+/**
+ * Called when the sidebar item directory is rendered
+ *
+ * @param {foundry.applications.sidebar.tabs.ItemDirectory} object - The item directory object
+ */
+export const RenderItemDirectory = async (object) => {
+  const html = object.element;
+  const render = html.querySelectorAll(".item");
+  const content = object.collection;
 
-  const render = html[0].querySelectorAll(".item");
-  const content = object.documents;
-
-  render.forEach(async (item) => {
+  for (const item of render) {
     const foundryDocument = content.find(
-      (e) => e.id === item.dataset.documentId
+      (e) => e.id === item.dataset.entryId
     );
 
-    const tagTemplate = $.parseHTML(
-      await renderTemplate(
-        `${OSE.systemPath()}/templates/actors/partials/item-auto-tags-partial.html`,
-        { tags: foundryDocument.system.autoTags || [] }
-      )
+    const tagsHtml = await foundry.applications.handlebars.renderTemplate(
+      `${OSE.systemPath()}/templates/actors/partials/item-auto-tags-partial.html`,
+      { tags: foundryDocument.system.autoTags || [] }
     );
-    $(item).append(tagTemplate);
-  });
+    item.insertAdjacentHTML("beforeend", tagsHtml);
+  }
 };

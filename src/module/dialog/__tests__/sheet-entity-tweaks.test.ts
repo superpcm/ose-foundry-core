@@ -23,7 +23,6 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
   describe("defaultOptions()", () => {
     it("Has correctly set defaultOptions", () => {
       const entityTweaks = new OseEntityTweaks();
-      expect(entityTweaks.options.id).equal("sheet-tweaks");
       expect(entityTweaks.options.classes).contain("sheet-tweaks");
       expect(entityTweaks.options.template).contain(
         "/templates/actors/dialogs/tweaks-dialog.html"

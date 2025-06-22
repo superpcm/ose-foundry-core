@@ -1,14 +1,21 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ESNext",
     "module": "ESNext",
     "allowJs": true,
-    "types": ["@league-of-foundry-developers/foundry-vtt-types"],
     "useDefineForClassFields": true,
-    "lib": ["ES6", "DOM"],
-    "moduleResolution": "Node",
+    "lib": [
+      "ES2022",
+      "ESNext.Array",
+      "ESNext.AsyncIterable",
+      "ESNext.Promise",
+      "DOM",
+      "DOM.Iterable",
+    ],
+    "moduleResolution": "node",
     "strict": true,
     "outDir": "dist/module",
+    "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
@@ -16,7 +23,21 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "allowUmdGlobalAccess": true
+    "noUncheckedIndexedAccess": true,
+    "allowUmdGlobalAccess": true,
+    "paths": {
+      "@client/*": ["./foundry/client/*"],
+      "@common/*": ["./foundry/common/*"],
+      "@setup/*": ["./foundry/setup/*"]
+    }
   },
-  "include": ["src/**/*.js", "src/**/*.ts", "src/**/*.d.ts"]
+  "include": [
+    "src/**/*.js",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "foundry/common/primitives/global.d.mts",
+    "foundry/client/global.d.mts",
+    "foundry/client/**/*.mjs",
+    "foundry/setup/**/*.mjs"
+  ]
 }

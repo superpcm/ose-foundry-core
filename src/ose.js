@@ -17,29 +17,25 @@ import OseDataModelWeapon from "./module/item/data-model-weapon";
 import OseItem from "./module/item/entity";
 import OseItemSheet from "./module/item/item-sheet";
 
-import * as chat from "./module/helpers-chat";
-import OSE from "./module/config";
+import { OSE } from "./module/config";
 import registerFVTTModuleAPIs from "./module/fvttModuleAPIs";
+import * as chat from "./module/helpers-chat";
 import handlebarsHelpers from "./module/helpers-handlebars";
 import * as macros from "./module/helpers-macros";
 import * as party from "./module/helpers-party";
+import * as treasure from "./module/helpers-treasure";
 import OsePartySheet from "./module/party/party-sheet";
 import templates from "./module/preloadTemplates";
 import * as renderList from "./module/renderList";
 import registerSettings from "./module/settings";
-import * as treasure from "./module/helpers-treasure";
+
+import { OSECombat } from "./module/combat/combat";
+import OSECombatTracker from "./module/combat/combat-tracker";
+import { OSECombatant } from "./module/combat/combatant";
+import TokenRulerOSE from "./module/actor/token-ruler";
 
 import "./e2e";
 import polyfill from "./module/polyfill";
-
-// Combat
-import { OSEGroupCombat } from "./module/combat/combat-group";
-import { OSEGroupCombatant } from "./module/combat/combatant-group";
-import { OSECombat } from "./module/combat/combat";
-import { OSECombatant } from "./module/combat/combatant";
-import { OSECombatTab } from "./module/combat/sidebar";
-
-
 
 polyfill();
 
@@ -55,29 +51,29 @@ Hooks.once("init", async () => {
 
   CONFIG.OSE = OSE;
 
-  // if (game.system.id === 'ose-dev') {
+  if (game.system.id === "ose-dev") {
     CONFIG.debug = {
       ...CONFIG.debug,
       combat: true,
-    }
-  // }
+    };
+  }
 
   // Register custom system settings
   registerSettings();
 
-  const isGroupInitiative = game.settings.get(game.system.id, "initiative") === "group";
-  if (isGroupInitiative) { 
-    CONFIG.Combat.documentClass = OSEGroupCombat;
-    CONFIG.Combatant.documentClass = OSEGroupCombatant;
-    CONFIG.Combat.initiative = { decimals: 2, formula: OSEGroupCombat.FORMULA }
-  } else {
-    CONFIG.Combat.documentClass = OSECombat;
-    CONFIG.Combatant.documentClass = OSECombatant;
-    CONFIG.Combat.initiative = { decimals: 2, formula: OSECombat.FORMULA }
-  }
+  CONFIG.Combat.documentClass = OSECombat;
+  CONFIG.Combatant.documentClass = OSECombatant;
+  const isGroupInitiative =
+    game.settings.get(game.system.id, "initiative") === "group";
+  CONFIG.Combat.initiative = {
+    decimals: 2,
+    formula: isGroupInitiative ? OSECombat.GROUP_FORMULA : OSECombat.FORMULA,
+  };
 
-  CONFIG.ui.combat = OSECombatTab;
-  
+  CONFIG.Combat.fallbackTurnMarker = "icons/svg/circle.svg";
+  CONFIG.ui.combat = OSECombatTracker;
+  CONFIG.Token.rulerClass = TokenRulerOSE;
+
   game.ose = {
     rollItemMacro: macros.rollItemMacro,
     rollTableMacro: macros.rollTableMacro,
@@ -95,11 +91,11 @@ Hooks.once("init", async () => {
   CONFIG.Actor.documentClass = OseActor;
   CONFIG.Item.documentClass = OseItem;
 
-  CONFIG.Actor.systemDataModels = {
+  CONFIG.Actor.dataModels = {
     character: OseDataModelCharacter,
     monster: OseDataModelMonster,
   };
-  CONFIG.Item.systemDataModels = {
+  CONFIG.Item.dataModels = {
     weapon: OseDataModelWeapon,
     armor: OseDataModelArmor,
     item: OseDataModelItem,
@@ -109,23 +105,41 @@ Hooks.once("init", async () => {
   };
 
   // Register sheet application classes
-  Actors.unregisterSheet("core", ActorSheet);
-  Actors.registerSheet(game.system.id, OseActorSheetCharacter, {
-    types: ["character"],
-    makeDefault: true,
-    label: "OSE.SheetClassCharacter",
-  });
-  Actors.registerSheet(game.system.id, OseActorSheetMonster, {
-    types: ["monster"],
-    makeDefault: true,
-    label: "OSE.SheetClassMonster",
-  });
+  foundry.documents.collections.Actors.unregisterSheet(
+    "core",
+    foundry.appv1.sheets.ActorSheet
+  );
+  foundry.documents.collections.Actors.registerSheet(
+    game.system.id,
+    OseActorSheetCharacter,
+    {
+      types: ["character"],
+      makeDefault: true,
+      label: "OSE.SheetClassCharacter",
+    }
+  );
+  foundry.documents.collections.Actors.registerSheet(
+    game.system.id,
+    OseActorSheetMonster,
+    {
+      types: ["monster"],
+      makeDefault: true,
+      label: "OSE.SheetClassMonster",
+    }
+  );
 
-  Items.unregisterSheet("core", ItemSheet);
-  Items.registerSheet(game.system.id, OseItemSheet, {
-    makeDefault: true,
-    label: "OSE.SheetClassItem",
-  });
+  foundry.documents.collections.Items.unregisterSheet(
+    "core",
+    foundry.appv1.sheets.ItemSheet
+  );
+  foundry.documents.collections.Items.registerSheet(
+    game.system.id,
+    OseItemSheet,
+    {
+      makeDefault: true,
+      label: "OSE.SheetClassItem",
+    }
+  );
 
   await templates();
 });
@@ -161,46 +175,42 @@ Hooks.once("ready", async () => {
   });
 });
 
-// License info
-Hooks.on("renderSidebarTab", async (object, html) => {
-  if (object instanceof ActorDirectory) {
-    party.addControl(object, html);
-  }
-  if (object instanceof Settings) {
-    const gamesystem = html.find("#game-details");
-    // SRD Link
-    const ose = gamesystem.find("h4").last();
-    ose.append(
-      ` <sub><a href="https://oldschoolessentials.necroticgnome.com/srd/index.php">SRD<a></sub>`
-    );
+// Party sheet control
+Hooks.on("activateActorDirectory", party.addControl);
 
-    // License text
-    const template = `${OSE.systemPath()}/templates/chat/license.html`;
-    const rendered = await renderTemplate(template);
-    gamesystem.find(".system").append(rendered);
-
-    // User guide
-    const docs = html.find("button[data-action='docs']");
-    const styling =
-      "border:none;margin-right:2px;vertical-align:middle;margin-bottom:5px";
-    $(
-      `<button type="button" data-action="userguide"><img src='${OSE.assetsPath}/dragon.png' width='16' height='16' style='${styling}'/>Old School Guide</button>`
-    ).insertAfter(docs);
-    html.find('button[data-action="userguide"]').click(() => {
-      new FrameViewer("https://ose.vtt.red/", {
-        resizable: true,
-      }).render(true);
-    });
-  }
+/**
+ * @param {Application} app
+ * @param {HTMLElement} html
+ */
+Hooks.on("renderSettings", async (app, html) => {
+  const gamesystem = html.querySelector("section.info");
+  const template = `${OSE.systemPath()}/templates/chat/license.html`;
+  const rendered = await foundry.applications.handlebars.renderTemplate(
+    template
+  );
+  gamesystem.insertAdjacentHTML("afterend", rendered);
 });
 
 Hooks.on("renderChatLog", (app, html) => OseItem.chatListeners(html));
 Hooks.on("getChatLogEntryContext", chat.addChatMessageContextOptions);
-Hooks.on("renderChatMessage", chat.addChatMessageButtons);
-Hooks.on("renderRollTableConfig", treasure.augmentTable);
+Hooks.on("getChatMessageContextOptions", chat.addChatMessageContextOptions);
+Hooks.on("renderChatMessageHTML", chat.addChatMessageButtons);
+Hooks.on("renderRollTableSheet", treasure.augmentTable);
 Hooks.on("updateActor", party.update);
+/**
+ * @param {OSECombatTracker} app - The combat tracker application
+ * @param {HTMLElement} html - The HTML element of the combat tracker
+ */
+Hooks.on("renderCombatTracker", (app, html) =>
+  app.renderGroups(html instanceof HTMLElement ? html : html[0])
+);
+/** @param {OSECombatant} combatant */
+Hooks.on("createCombatant", (combatant) => {
+  if (game.settings.get(game.system.id, "initiative") !== "group") return;
+  combatant.assignGroup();
+});
 
 Hooks.on("renderCompendium", renderList.RenderCompendium);
-Hooks.on("renderSidebarDirectory", renderList.RenderDirectory);
+Hooks.on("activateItemDirectory", renderList.RenderItemDirectory);
 
 Hooks.on("OSE.Party.showSheet", OsePartySheet.showPartySheet);

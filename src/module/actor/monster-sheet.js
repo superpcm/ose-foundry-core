@@ -4,6 +4,7 @@
 import OSE from "../config";
 import OseActorSheet from "./actor-sheet";
 
+
 /**
  * Extend the basic ActorSheet with some very simple modifications
  */
@@ -55,7 +56,7 @@ export default class OseActorSheetMonster extends OseActorSheet {
    * The prepared data object contains both the actor data as well as additional sheet options
    */
   async getData() {
-    const data = super.getData();
+    const data = await super.getData();
     // Prepare owned items
     this._prepareItems(data);
 
@@ -63,18 +64,18 @@ export default class OseActorSheetMonster extends OseActorSheet {
 
     // Settings
     data.config.morale = game.settings.get(game.system.id, "morale");
-    monsterData.details.treasure.link = await TextEditor.enrichHTML(
-      monsterData.details.treasure.table,
-      { async: true }
-    );
+    monsterData.details.treasure.link =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        monsterData.details.treasure.table,
+        { async: true }
+      );
     data.isNew = this.actor.isNew();
 
-    if (foundry.utils.isNewerVersion(game.version, "10.264")) {
-      data.enrichedBiography = await TextEditor.enrichHTML(
+    data.enrichedBiography =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
         this.object.system.details.biography,
         { async: true }
       );
-    }
     return data;
   }
 
@@ -85,35 +86,38 @@ export default class OseActorSheetMonster extends OseActorSheet {
     const choices = CONFIG.OSE.monster_saves;
 
     const templateData = { choices };
-    const dlg = await renderTemplate(
+    const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/dialogs/monster-saves.html`,
       templateData
     );
     // Create Dialog window
-    new Dialog(
-      {
-        title: game.i18n.localize("OSE.dialog.generateSaves"),
-        content: dlg,
-        buttons: {
-          ok: {
-            label: game.i18n.localize("OSE.Ok"),
-            icon: '<i class="fas fa-check"></i>',
-            callback: (html) => {
-              const hd = html.find('input[name="hd"]').val();
-              this.actor.generateSave(hd);
-            },
-          },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
-            label: game.i18n.localize("OSE.Cancel"),
+    return new foundry.applications.api.DialogV2({
+      window: { title: game.i18n.localize("OSE.dialog.generateSaves") },
+      position: {
+        width: 250,
+      },
+      content: dlg,
+      buttons: [
+        {
+          action: "ok",
+          label: game.i18n.localize("OSE.Ok"),
+          icon: "fas fa-check",
+          default: true,
+          callback: (event, button) => {
+            const { hd } = new foundry.applications.ux.FormDataExtended(
+              button.form
+            ).object;
+            this.actor.generateSave(hd.replace(/[^\d+.-]/g, ""));
           },
         },
-        default: "ok",
-      },
-      {
-        width: 250,
-      }
-    ).render(true);
+        {
+          action: "cancel",
+          icon: "fas fa-times",
+          label: game.i18n.localize("OSE.Cancel"),
+          callback: () => {},
+        },
+      ],
+    }).render(true);
   }
 
   async _onDrop(event) {

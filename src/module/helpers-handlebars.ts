@@ -75,9 +75,9 @@ const registerHelpers = async () => {
   Handlebars.registerHelper("ceil", (val) => Math.ceil(val));
 
   Handlebars.registerHelper(
-    'partial', 
+    "partial",
     (path) => `${OSE.systemPath()}/templates/${path}`
-  )
+  );
 };
 
 export default registerHelpers;

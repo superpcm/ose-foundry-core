@@ -11,11 +11,16 @@ import OseItem from "../../item/entity";
 import * as e2e from "../../../e2e";
 import {
   cleanUpActorsByKey,
+  cleanUpCompendium,
   cleanUpScenes,
   cleanUpWorldItems,
+  createMockActorKey,
+  createMockCompendium,
   createMockScene,
   createWorldTestItem,
+  delay,
   itemTypes,
+  rollSpecificNumber,
   trashChat,
   waitForInput,
 } from "../../../e2e/testUtils";
@@ -49,44 +54,53 @@ export default ({
   });
 
   describe("update(data, options)", () => {
-    // @todo: Write tests
+    // Armor class values cannot be modified directly as they are derived from
+    // armor, shield, and modifier values.
     it("AAC to AC", async () => {
       const actor = await createMockActor("character");
       expect(actor?.system.ac.value).equal(12);
       expect(actor?.system.aac.value).equal(7);
-      await actor?.system.update({ ac: { value: 15 } });
-      await waitForInput();
-      expect(actor?.system.ac.value).equal(15);
-      expect(actor?.system.aac.value).equal(19 - 15);
+      await actor?.update({ "system.ac.mod": 1 });
+      expect(actor?.system.ac.value).equal(11);
+      expect(actor?.system.aac.value).equal(19 - 11);
+      await actor?.update({ "system.ac.mod": 2 });
+      expect(actor?.system.ac.value).equal(10);
+      expect(actor?.system.aac.value).equal(19 - 10);
+      await actor?.update({ "system.ac.mod": -1 });
+      expect(actor?.system.ac.value).equal(13);
+      expect(actor?.system.aac.value).equal(19 - 13);
     });
 
     it("AC to AAC", async () => {
       const actor = await createMockActor("character");
       expect(actor?.system.ac.value).equal(12);
       expect(actor?.system.aac.value).equal(7);
-      await actor?.system.update({ aac: { value: 15 } });
-      await waitForInput();
-      expect(actor?.system.aac.value).equal(15);
-      expect(actor?.system.ac.value).equal(19 - 15);
+      await actor?.update({ "system.aac.mod": 1 });
+      expect(actor?.system.aac.value).equal(8);
+      expect(actor?.system.ac.value).equal(19 - 8);
+      await actor?.update({ "system.aac.mod": 2 });
+      expect(actor?.system.aac.value).equal(9);
+      expect(actor?.system.ac.value).equal(19 - 9);
+      await actor?.update({ "system.aac.mod": -1 });
+      expect(actor?.system.aac.value).equal(6);
+      expect(actor?.system.ac.value).equal(19 - 6);
     });
 
     it("THAC0 to BBA", async () => {
       const actor = await createMockActor("character");
-      expect(actor?.system.thac0.value).equal(12);
-      expect(actor?.system.thac0.value).equal(7);
-      await actor?.system.update({ thac0: { value: 15 } });
-      await waitForInput();
+      expect(actor?.system.thac0.value).equal(19);
+      expect(actor?.system.thac0.bba).equal(0);
+      await actor?.update({ "system.thac0.value": 15 });
       expect(actor?.system.thac0.value).equal(15);
-      expect(actor?.system.thac0.value).equal(19 - 15);
+      expect(actor?.system.thac0.bba).equal(19 - 15);
     });
 
     it("BBA to THAC0", async () => {
       const actor = await createMockActor("character");
-      expect(actor?.system.thac0.value).equal(12);
-      expect(actor?.system.thac0.value).equal(7);
-      await actor?.system.update({ thac0: { bba: 15 } });
-      await waitForInput();
-      expect(actor?.system.thac0.value).equal(15);
+      expect(actor?.system.thac0.value).equal(19);
+      expect(actor?.system.thac0.bba).equal(0);
+      await actor?.update({ "system.thac0.bba": 15 });
+      expect(actor?.system.thac0.bba).equal(15);
       expect(actor?.system.thac0.value).equal(19 - 15);
     });
   });
@@ -149,6 +163,45 @@ export default ({
       await waitForInput();
       expect(game.messages?.size).equal(1);
       await actor?.delete();
+    });
+  });
+
+  describe("_preCreate(data, options, user)", () => {
+    it("New character's prototypeToken actorLink defaults to true", async () => {
+      const actor = (await createMockActor("character")) as OseActor;
+      expect(actor.prototypeToken.actorLink).equal(true);
+    });
+
+    it("New monster's prototypeToken actorLink defaults to false", async () => {
+      const actor = (await createMockActor("monster")) as OseActor;
+      expect(actor.prototypeToken.actorLink).equal(false);
+    });
+
+    it("Character from compendium does not have defaults applied on import", async () => {
+      const compendium = await createMockCompendium("Actor");
+      const actor = await createMockActorKey(
+        "character",
+        { "prototypeToken.actorLink": false },
+        key
+      );
+
+      // Import Actor into Compendium and remove source actor
+      const actorInCompendium = await compendium.importDocument(actor);
+      await cleanUpActorsByKey(key);
+
+      // Import Compendium Actor into world
+      const importedActor = await game.actors.importFromCompendium(
+        compendium,
+        actorInCompendium.id
+      );
+
+      // Perform test
+      expect(importedActor.prototypeToken.actorLink).equal(false);
+    });
+
+    after(async () => {
+      await cleanUpCompendium();
+      await cleanUpActorsByKey(key);
     });
   });
 
@@ -473,35 +526,40 @@ export default ({
     const levelSpread = Array.from({ length: 9 }, (_el, idx) => idx + 1);
 
     conScoreSpread.forEach((con, idx) => {
-      const conMod = conBonusSpread[idx];
-      const expectedTerms = conMod >= 0 ? 5 : 6;
+      const conMod = conBonusSpread[idx] || 0;
+      const expectedTerms = 3;
       const modSign = conMod < 0 ? "-" : "+";
       const modUnsigned = modSign === "-" ? conMod * -1 : conMod;
       levelSpread.forEach((level) => {
         it(`constructs the roll terms correctly with level ${level} and con ${con}`, async () => {
           const actor = (await createMockActor("character")) as OseActor;
           await actor?.update({
-            system: { details: { level }, scores: { con: { value: con } } },
+            system: {
+              details: { level },
+              hp: { hd: `${level}d8` },
+              scores: { con: { value: con } },
+            },
           });
           const roll = await actor.rollHitDice();
 
-          expect(roll.terms.length).equal(expectedTerms);
-          expect(roll.terms[0].expression).equal(actor?.system.hp.hd);
-          if (conMod < 0) {
-            expect(roll.terms[expectedTerms - 5].operator).equal("+");
-          }
-          expect(roll.terms[expectedTerms - 4].operator).equal(modSign);
-          expect(roll.terms[expectedTerms - 3].expression).equal(
-            modUnsigned.toString()
+          expect(roll.terms.length).equal(1); // FunctionTerm: max(1d8 + 0, 1)
+          expect(roll.terms[0].rolls.length).equal(2); // 1d8 + 0, 1
+          expect(roll.terms[0].rolls[0].terms.length).equal(expectedTerms); // 1d8, +, 0
+          expect(roll.terms[0].rolls[0].terms[0].expression).equal(
+            actor?.system.hp.hd // 1d8
           );
-          expect(roll.terms[expectedTerms - 2].operator).equal("+");
-          expect(roll.terms[expectedTerms - 1].expression).equal(
-            level.toString()
+          expect(roll.terms[0].rolls[0].terms[1].operator).equal(modSign);
+          expect(roll.terms[0].rolls[0].terms[2].expression).equal(
+            (modUnsigned * level).toString()
           );
           expect(actor?.system.scores.con.mod).equal(conMod);
           await actor?.delete();
         });
       });
+    });
+
+    after(async () => {
+      await trashChat();
     });
   });
 
@@ -527,7 +585,7 @@ export default ({
         await waitForInput();
         expect(game.messages?.size).equal(1);
         expect(game.messages?.contents[0].content).contain(
-          game.i18n.format("OSE.roll.appearing", { type: "(2)" })
+          game.i18n.format("OSE.roll.appearing", { type: "2" })
         );
         await actor.delete();
       });
@@ -539,7 +597,7 @@ export default ({
         await waitForInput();
         expect(game.messages?.size).equal(1);
         expect(game.messages?.contents[0].content).contain(
-          game.i18n.format("OSE.roll.appearing", { type: "(1)" })
+          game.i18n.format("OSE.roll.appearing", { type: "1" })
         );
         await actor.delete();
       });
@@ -636,7 +694,7 @@ export default ({
       expect(game.messages?.contents[0].content).contain(
         `test - ${game.i18n.localize("OSE.Damage")}`
       );
-      expect(game.messages?.contents[0].content).contain("15 +  - 3");
+      expect(game.messages?.contents[0].content).contain("15 - 3");
       await actor.delete();
     });
   });
@@ -645,19 +703,22 @@ export default ({
     before(async () => {
       const scene = await createMockScene();
       await scene?.activate();
+      await delay(500);
     });
 
     afterEach(async () => {
       await trashChat();
+      await waitForInput();
     });
 
     it("One target causes one attack roll", async () => {
       const actor = (await createMockActor("character")) as OseActor;
       const token = await actor.getTokenDocument();
-      await canvas.scene?.createEmbeddedDocuments("Token", [token]);
+      await delay(500);
+      await token.constructor.create(token, { parent: canvas.scene });
       await waitForInput();
       expect(game.user?.targets.size).equal(0);
-      canvas.tokens?.placeables.forEach((t) =>
+      canvas.tokens?.placeables.forEach((t: Token) =>
         t.setTarget(true, { releaseOthers: false, groupSelection: true })
       );
       expect(canvas.tokens?.placeables[0].actor).not.null;
@@ -669,7 +730,7 @@ export default ({
       });
       await waitForInput();
       expect(game.messages?.size).equal(1);
-      canvas.tokens?.placeables[0].setTarget(false, { releaseOthers: true });
+      canvas.tokens?.placeables.forEach((t: Token) => t.setTarget(false));
       expect(game.user?.targets.size).equal(0);
       await actor.delete();
     });
@@ -677,10 +738,10 @@ export default ({
     it("Multiple target causes multiple attack rolls", async () => {
       const actor = (await createMockActor("character")) as OseActor;
       const token = await actor.getTokenDocument();
-      await canvas.scene?.createEmbeddedDocuments("Token", [token]);
+      await token.constructor.create(token, { parent: canvas.scene });
       await waitForInput();
       expect(game.user?.targets.size).equal(0);
-      canvas.tokens?.placeables.forEach((t) =>
+      canvas.tokens?.placeables.forEach((t: Token) =>
         t.setTarget(true, { releaseOthers: false, groupSelection: true })
       );
       expect(game.user?.targets.size).equal(2);
@@ -690,7 +751,7 @@ export default ({
       });
       await waitForInput();
       expect(game.messages?.size).equal(2);
-      canvas.tokens?.placeables[0].setTarget(false, { releaseOthers: true });
+      canvas.tokens?.placeables.forEach((t: Token) => t.setTarget(false));
       expect(game.user?.targets.size).equal(0);
       await actor.delete();
     });
@@ -715,8 +776,8 @@ export default ({
       await actor.delete();
     });
 
-    after(() => {
-      cleanUpScenes();
+    after(async () => {
+      await cleanUpScenes();
     });
   });
 
@@ -727,6 +788,7 @@ export default ({
 
     afterEach(async () => {
       await trashChat();
+      await waitForInput();
     });
 
     it("rolls a d20 if supplied no data", async () => {
@@ -743,17 +805,23 @@ export default ({
     });
 
     it("Provided an item, adds item damage to dmgParts", async () => {
-      // @todo: How to verify the item is being rolled?
-      /* const actor = await createMockActor("character");
+      const actor = await createMockActor("character");
       const item = await createWorldTestItem("weapon");
       expect(item?.system.damage).is.not.undefined;
       expect(game.messages?.size).equal(0);
-      const rolldata = await actor.rollAttack({ roll: {}, item }, { skipDialog: true });
+      const rolldata = await actor.rollAttack(
+        { roll: {}, item },
+        { skipDialog: true }
+      );
       expect(rolldata.formula).equal("1d20");
       await waitForInput();
       expect(game.messages?.size).equal(1);
+      expect(game.messages?.contents[0].content).contain(
+        game.i18n.format("OSE.roll.attacksWith", { name: item?.name })
+      );
+      expect(game.messages?.contents[0].content).contain("1d20");
       actor?.delete();
-      item?.delete(); */
+      item?.delete();
     });
 
     it("If missile attack, add dex mod to attack roll", async () => {
@@ -763,7 +831,7 @@ export default ({
         { roll: {} },
         { type: "missile", skipDialog: true }
       );
-      expect(rolldata.formula).equal("1d20 +  - 3 + 0");
+      expect(rolldata.formula).equal("1d20 - 3");
       await waitForInput();
       expect(game.messages?.size).equal(1);
       await actor.delete();
@@ -777,14 +845,37 @@ export default ({
         { roll: {} },
         { type: "melee", skipDialog: true }
       );
-      expect(rolldata.formula).equal("1d20 + 3 + 0");
+      expect(rolldata.formula).equal("1d20 + 3");
       await waitForInput();
       expect(game.messages?.size).equal(1);
       await actor.delete();
     });
 
     // @todo: How to verify if possible to miss, thus obfuscating dmg roll?
-    it("If melee attack, add str mod to damage roll", async () => {});
+    it("If melee attack, add str mod to damage roll", async () => {
+      // Ensure the dice roll is a 10 to make sure the attack is successful
+      const existingRandomFunction = CONFIG.Dice.randomUniform;
+      CONFIG.Dice.randomUniform = () => rollSpecificNumber(10, 20);
+
+      const actor = (await createMockActor("character")) as OseActor;
+      await actor.update({ system: { scores: { str: { value: 18 } } } });
+      expect(game.messages?.size).equal(0);
+      const rolldata = await actor.rollAttack(
+        { roll: {} },
+        { type: "melee", skipDialog: true }
+      );
+      expect(rolldata.formula).equal("1d20 + 3");
+      await waitForInput();
+      expect(game.messages?.size).equal(1);
+      expect(game.messages?.contents[0].content).contain(
+        game.i18n.localize("OSE.messages.InflictsDamage")
+      );
+      expect(game.messages?.contents[0].content).contain("1d6 + 3");
+      await actor.delete();
+
+      // Restore the original random function
+      CONFIG.Dice.randomUniform = existingRandomFunction;
+    });
 
     it("If item provided with a bonus, it is added as bonus to attack roll", async () => {
       const actor = (await createMockActor("character")) as OseActor;

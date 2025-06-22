@@ -52,15 +52,26 @@ export default class OseItem extends Item {
 
   async prepareDerivedData() {
     // Rich text description
-    this.system.enrichedDescription = await TextEditor.enrichHTML(
-      this.system.details?.description || this.system.description,
-      { async: true }
-    );
+    this.system.enrichedDescription =
+      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        this.system.description,
+        { async: true }
+      );
   }
 
   static chatListeners(html) {
-    html.on("click", ".card-buttons button", this._onChatCardAction.bind(this));
-    html.on("click", ".item-name", this._onChatCardToggleContent.bind(this));
+    // Use event delegation for buttons
+    html.addEventListener("click", (event) => {
+      const button = event.target.closest(".card-buttons button");
+      if (button) {
+        OseItem._onChatCardAction(event);
+      }
+
+      const itemName = event.target.closest(".item-name");
+      if (itemName) {
+        OseItem._onChatCardToggleContent(event);
+      }
+    });
   }
 
   async getChatData(htmlOptions) {
@@ -107,26 +118,28 @@ export default class OseItem extends Item {
 
     if (itemData.missile && itemData.melee && !isNPC) {
       // Dialog
-      new Dialog({
-        title: "Choose Attack Range",
+      new foundry.applications.api.DialogV2({
+        window: { title: "Choose Attack Range" },
         content: "",
-        buttons: {
-          melee: {
-            icon: '<i class="fas fa-fist-raised"></i>',
-            label: "Melee",
+        buttons: [
+          {
+            action: "melee",
+            icon: "fas fa-fist-raised",
+            label: game.i18n.localize("OSE.Melee"),
+            default: true,
             callback: () => {
               this.actor.targetAttack(rollData, "melee", options);
             },
           },
-          missile: {
-            icon: '<i class="fas fa-bullseye"></i>',
-            label: "Missile",
+          {
+            action: "missile",
+            icon: "fas fa-bullseye",
+            label: game.i18n.localize("OSE.Missile"),
             callback: () => {
               this.actor.targetAttack(rollData, "missile", options);
             },
           },
-        },
-        default: "melee",
+        ],
       }).render(true);
       return true;
     }
@@ -195,7 +208,7 @@ export default class OseItem extends Item {
       await this.rollFormula()
     } else {
       await this.show({ skipDialog: true })
-    };
+    }
   }
 
   _getRollTag(data) {
@@ -278,7 +291,16 @@ export default class OseItem extends Item {
     return tagList;
   }
 
-  pushManualTag(values) {
+  /**
+   * Push a manual tag to the item.
+   * This will automatically fill in the checkboxes for melee, slow, and missile tags, skipping the tag list.
+   * If the tag has one of these special tags in parentheses (e.g. "Bulky (Slow)"), the Slow checkbox
+   * will be checked, and the tag will be added to the list with the title "Bulky".
+   *
+   * @param {string[]} values - The values of the tags to add.
+   * @returns {Promise<OseItem|undefined>>} - The updated Document instance, or undefined if not updated
+   */
+  async pushManualTag(values) {
     const data = this?.system;
     let update = [];
     if (data.tags) {
@@ -299,24 +321,34 @@ export default class OseItem extends Item {
           title = val;
         }
         // Auto fill checkboxes
-        switch (val) {
-          case CONFIG.OSE.tags.melee: {
+        switch (title.toLowerCase()) {
+          case CONFIG.OSE.tags.melee.toLowerCase(): {
             newData.melee = true;
             break;
           }
 
-          case CONFIG.OSE.tags.slow: {
+          case CONFIG.OSE.tags.slow.toLowerCase(): {
             newData.slow = true;
             break;
           }
 
-          case CONFIG.OSE.tags.missile: {
+          case CONFIG.OSE.tags.missile.toLowerCase(): {
             newData.missile = true;
             break;
           }
         }
-        if (!newData.melee && !newData.slow && !newData.missile)
-          update.push({ title, value: val, label: val });
+
+        // Add the tag if it has a specific title or if it is not a checkbox
+        if (
+          title !== val ||
+          (!newData.melee && !newData.slow && !newData.missile)
+        ) {
+          update.push({
+            title,
+            value: val,
+            label: val,
+          });
+        }
       });
     } else {
       update = values;
@@ -325,13 +357,21 @@ export default class OseItem extends Item {
     return this.update({ system: newData });
   }
 
+  /**
+   * Remove a manual tag from the item.
+   *
+   * @param {string} value - The value of the tag to remove.
+   * @returns {Promise<OseItem|undefined>} - The updated Document instance, or undefined if not updated
+   */
   popManualTag(value) {
     const itemData = this.system;
 
     const { tags } = itemData;
     if (!tags) return;
 
-    const update = tags.filter((el) => el.value != value);
+    const update = tags.filter(
+      (el) => el.value.toLowerCase() !== value.toLowerCase()
+    );
     const newData = {
       tags: update,
     };
@@ -375,12 +415,12 @@ export default class OseItem extends Item {
   async show() {
     const itemType = this.type;
     // Basic template rendering data
-    const { token } = this.actor; // v10: prototypeToken?
+    const token = this.actor?.token;
     const templateData = {
       actor: this.actor,
       tokenId: token ? `${token.parent.id}.${token.id}` : null,
       item: this._source,
-      itemId: this._source.id,
+      itemId: this._source._id,
       data: await this.getChatData(),
       labels: this.labels,
       isHealing: this.isHealing,
@@ -389,22 +429,25 @@ export default class OseItem extends Item {
       hasSave: this.hasSave,
       config: CONFIG.OSE,
     };
-    templateData.rollFormula = new Roll(templateData.data.roll, templateData).formula;
+    templateData.rollFormula = new Roll(
+      templateData.data.roll,
+      templateData
+    ).formula;
     templateData.data.properties = this.system.autoTags;
 
     // Render the chat card template
     const template = `${OSE.systemPath()}/templates/chat/item-card.html`;
-    const html = await renderTemplate(template, templateData);
+    const html = await foundry.applications.handlebars.renderTemplate(template, templateData);
 
     // Basic chat message data
     const chatData = {
       user: game.user.id,
-      type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+      type: CONST.CHAT_MESSAGE_STYLES.OTHER,
       content: html,
       speaker: {
-        actor: this.actor.id,
-        token: this.actor.token,
-        alias: this.actor.name,
+        actor: this.actor?.id,
+        token: this.actor?.token,
+        alias: this.actor?.name,
       },
     };
 
@@ -427,7 +470,7 @@ export default class OseItem extends Item {
    */
   static _onChatCardToggleContent(event) {
     event.preventDefault();
-    const header = event.currentTarget;
+    const header = event.target.closest(".item-name");
     const card = header.closest(".chat-card");
     const content = card.querySelector(".card-content");
     if (content.style.display === "none") {
@@ -441,7 +484,7 @@ export default class OseItem extends Item {
     event.preventDefault();
 
     // Extract card data
-    const button = event.currentTarget;
+    const button = event.target.closest(".card-buttons button");
     button.disabled = true;
     const card = button.closest(".chat-card");
     const { messageId } = card.closest(".message").dataset;

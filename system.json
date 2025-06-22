@@ -1,26 +1,29 @@
 {
-  "name": "ose-dev",
   "id": "ose-dev",
   "title": "Old-School Essentials Development Build",
   "description": "Simple, robust rules compatible with decades of Basic/Expert material",
   "version": "AUTOMATICALLY REPLACED BY GITHUB WORKFLOW ACTION",
-  "minimumCoreVersion": "12",
-  "compatibleCoreVersion": "12",
   "compatibility": {
-    "minimum": "12",
-    "verified": "12",
-    "maximum": "12"
+    "minimum": "13",
+    "verified": "13"
   },
-  "author": "Maintained by VTT Red with 18 contributors",
   "authors": [
+    {
+      "name": "Necrotic Gnome",
+      "url": "https://necroticgnome.com/"
+    },
     {
       "name": "VTT RED",
       "email": "ose-system@vtt.red",
       "url": "https://vtt.red"
     },
     {
-      "name": "and 18 other contributors",
-      "url": "https://github.com/vttred/ose#contributors-"
+      "name": "Blair McMillan",
+      "discord": "blair#9056"
+    },
+    {
+      "name": "and many other contributors",
+      "url": "https://github.com/NecroticGnome/ose-foundry-core#contributors-"
     }
   ],
   "esmodules": [
@@ -92,12 +95,14 @@
       "path": "dist/lang/ru.json"
     }
   ],
-  "gridDistance": 5,
-  "gridUnits": "ft",
+  "grid": {
+    "distance": 5,
+    "units": "ft"
+  },
   "url": "AUTOMATICALLY REPLACED BY GITHUB WORKFLOW ACTION",
   "manifest": "AUTOMATICALLY REPLACED BY GITHUB WORKFLOW ACTION",
   "download": "AUTOMATICALLY REPLACED BY GITHUB WORKFLOW ACTION",
-  "bugs": "https://github.com/vttred/ose/issues",
+  "bugs": "https://github.com/NecroticGnome/ose-foundry-core/issues",
   "flags": {
     "allowBugReporter": true
   },

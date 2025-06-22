@@ -3,6 +3,31 @@
  */
 import OseActor from "./actor/entity";
 
+import { OseContextMenuEntry } from "../global";
+
+/**
+ * Apply damage to a target actor
+ *
+ * @param {Actor | null} actor - The target actor to apply damage to
+ * @param {string} amount - The amount of damage to apply
+ * @param {1 | -1} multiplier - The multiplier to apply to the damage
+ * @param {string} nameOrId - The name or ID of the target actor
+ */
+async function applyDamageToTarget(
+  actor: Actor | null,
+  amount: string,
+  multiplier: 1 | -1,
+  nameOrId: string
+) {
+  if (!game.user?.isGM || !(actor instanceof OseActor)) {
+    ui.notifications?.error(
+      game.i18n.format("OSE.error.cantDealDamageTo", { nameOrId })
+    );
+    return;
+  }
+  await actor.applyDamage(amount, multiplier);
+}
+
 /**
  * Apply rolled dice damage to the token or tokens which are currently controlled.
  * This allows for damage to be scaled by a multiplier to account for healing, critical hits, or resistance
@@ -10,54 +35,73 @@ import OseActor from "./actor/entity";
  * @param {HTMLElement} html - The chat entry which contains the roll data
  * @param {number} multiplier - A damage multiplier to apply to the rolled damage.
  */
-function applyChatCardDamage(html: JQuery, multiplier: 1 | -1) {
-  const amount = html.find(".dice-total").last().text();
+function applyChatCardDamage(html: HTMLElement, multiplier: 1 | -1) {
+  const diceTotalTargets = html.querySelectorAll(".dice-total");
+  const lastDiceTotalTarget = diceTotalTargets[
+    diceTotalTargets.length - 1
+  ] as HTMLElement;
+  const amount = lastDiceTotalTarget?.textContent || "0";
   const dmgTgt = game.settings.get(game.system.id, "applyDamageOption");
   if (dmgTgt === CONFIG.OSE.apply_damage_options.originalTarget) {
-    const victimId = html.find(".chat-target").last().data("id");
+    const victimId = (html.querySelector(".chat-target") as HTMLElement)
+      ?.dataset.id;
     (async () => {
-      const actor = ((await fromUuid(victimId || '')) as TokenDocument)?.actor;
-      await applyDamageToTarget(actor, amount, multiplier, actor?.name || victimId || 'original target');
+      const actor = ((await fromUuid(victimId || "")) as TokenDocument)?.actor;
+      await applyDamageToTarget(
+        actor,
+        amount,
+        multiplier,
+        actor?.name || victimId || "original target"
+      );
     })();
   }
   if (dmgTgt === CONFIG.OSE.apply_damage_options.targeted) {
-    game.user?.targets.forEach((t) => applyDamageToTarget(t.actor, amount, multiplier, t.name));
+    game.user?.targets.forEach((t) =>
+      applyDamageToTarget(t.actor, amount, multiplier, t.name)
+    );
   }
   if (dmgTgt === CONFIG.OSE.apply_damage_options.selected) {
-    canvas.tokens?.controlled.forEach((t) => applyDamageToTarget(t.actor, amount, multiplier, t.name));
+    canvas.tokens?.controlled.forEach((t) =>
+      applyDamageToTarget(t.actor, amount, multiplier, t.name)
+    );
   }
 }
 
-async function applyDamageToTarget(actor: Actor | null, amount: string, multiplier: 1 | -1, nameOrId: string) {
-  if (!game.user?.isGM || !(actor instanceof OseActor)) {
-    ui.notifications?.error(game.i18n.format("OSE.error.cantDealDamageTo", { nameOrId }));
-    return;
-  }
-  await actor.applyDamage(amount, multiplier);
-}
-
-const canApply: ContextMenuEntry["condition"] = (li) =>
-  canApplyDamage(li) && !!li.find(".dice-roll").length;;
-
-function canApplyDamage(html: JQuery) {
-  if (!html.find('.dice-total').length) return false;
-  const applyDamageOption = game.settings.get(game.system.id, "applyDamageOption");
+/**
+ * Check if the chat card can apply damage
+ *
+ * @param {HTMLElement} html - The chat card HTML element
+ */
+function canApplyDamage(html: HTMLElement) {
+  if (!html.querySelector(".dice-total")) return false;
+  const applyDamageOption = game.settings.get(
+    game.system.id,
+    "applyDamageOption"
+  );
   switch (applyDamageOption) {
     case CONFIG.OSE.apply_damage_options.originalTarget:
-      return !!html.find(".chat-target").last().data("id");
+      const chatTargets = html.querySelectorAll(".chat-target");
+      const lastChatTarget = chatTargets[chatTargets.length - 1] as HTMLElement;
+      return !!lastChatTarget?.dataset.id;
+
     case CONFIG.OSE.apply_damage_options.targeted:
       return !!game.user?.targets?.size;
+
     case CONFIG.OSE.apply_damage_options.selected:
       return !!canvas.tokens?.controlled.length;
-    default: {
-      ui.notifications?.error(game.i18n.format("OSE.error.unexpectedSettings", {
-        configName: 'applyDamageOption',
-        configValue: applyDamageOption,
-      }));
+
+    default:
+      ui.notifications?.error(
+        game.i18n.format("OSE.error.unexpectedSettings", {
+          configName: "applyDamageOption",
+          configValue: applyDamageOption,
+        })
+      );
       return false;
-    }
   }
 }
+
+const canApply: OseContextMenuEntry["condition"] = (li) => canApplyDamage(li);
 
 /**
  * This function is used to hook into the Chat Log context menu to add additional options to each message
@@ -68,8 +112,8 @@ function canApplyDamage(html: JQuery) {
  * @returns {undefined}
  */
 export const addChatMessageContextOptions = (
-  _: JQuery,
-  options: ContextMenuEntry[]
+  _: HTMLElement,
+  options: OseContextMenuEntry[]
 ) => {
   options.push(
     {
@@ -90,29 +134,34 @@ export const addChatMessageContextOptions = (
 
 /* -------------------------------------------- */
 
-export const addChatMessageButtons = (msg: ChatMessage, html: JQuery) => {
+export const addChatMessageButtons = (msg: ChatMessage, html: HTMLElement) => {
   // Hide blind rolls
-  const blindable = html.find(".blindable");
+  const blindable = html.querySelector(".blindable") as HTMLElement;
   if (
     // @ts-ignore need to add ChatMessage document property updates.
     msg?.blind &&
     !game.user?.isGM &&
     blindable &&
-    blindable.data("blind") === true
+    blindable.dataset.blind === "true"
   ) {
-    blindable.replaceWith(
-      "<div class='dice-roll'><div class='dice-result'><div class='dice-formula'>???</div></div></div>"
-    );
+    blindable.outerHTML =
+      "<div class='dice-roll'><div class='dice-result'><div class='dice-formula'>???</div></div></div>";
   }
   // Buttons
-  const roll = html.find(".damage-roll");
-  if (roll.length > 0 && canApplyDamage(html)) {
-    roll.append(
-      $(
-        `<div class="dice-damage"><button type="button" data-action="apply-damage"><i class="fas fa-tint"></i></button></div>`
-      )
-    );
-    roll.find('button[data-action="apply-damage"]').on("click", (ev) => {
+  const roll = html.querySelector(".damage-roll");
+  if (roll && canApplyDamage(html)) {
+    const diceDamageDiv = document.createElement("div");
+    diceDamageDiv.className = "dice-damage";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.action = "apply-damage";
+    button.innerHTML = '<i class="fas fa-tint"></i>';
+
+    diceDamageDiv.append(button);
+    roll.append(diceDamageDiv);
+
+    button.addEventListener("click", (ev) => {
       ev.preventDefault();
       applyChatCardDamage(html, 1);
     });

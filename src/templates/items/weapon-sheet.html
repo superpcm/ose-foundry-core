@@ -143,11 +143,8 @@
           <label>{{localize 'OSE.spells.Save'}}</label>
           <div class="form-fields">
             <select name="system.save">
-              {{#select system.save}}
               <option value=""></option>
-              {{#each config.saves_short as |save a|}}
-              <option value="{{a}}">{{save}}</option>
-              {{/each}} {{/select}}
+              {{selectOptions config.saves_short selected=system.save}}
             </select>
           </div>
         </div>
@@ -171,6 +168,7 @@
           owner=owner
           editable=editable
           async=true
+          engine="prosemirror"
         }}
       </div>
     </div>

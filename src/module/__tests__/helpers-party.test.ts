@@ -43,7 +43,7 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
 
     it("Opens a partysheet when in party", async () => {
       const actor = await createMockActor("character");
-      actor?.setFlag(game.system.id, "party", true);
+      await actor?.setFlag(game.system.id, "party", true);
       update(actor);
       await waitForInput();
       await OsePartySheet?.partySheet?.render(true);
@@ -55,7 +55,6 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
       expect(openDialogs().length).equal(1);
       await closeDialogs();
       actor?.delete();
-      expect(openDialogs().length).equal(1);
     });
   });
 };

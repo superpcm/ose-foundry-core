@@ -25,7 +25,7 @@ export default class OseDataModelWeapon extends foundry.abstract.TypeDataModel {
       bonus: new NumberField({}),
       pattern: new StringField(),
       missile: new BooleanField(),
-      melee: new BooleanField(),
+      melee: new BooleanField({ initial: true }),
       slow: new BooleanField(),
       counter: new SchemaField({
         value: new NumberField({ integer: true, min: 0, initial: 0 }),
@@ -106,7 +106,7 @@ export default class OseDataModelWeapon extends foundry.abstract.TypeDataModel {
     );
 
     return [
-      { label: this.damage, icon: "fa-tint" },
+      { label: this.damage ?? "", icon: "fa-tint" },
       this.#meleeTag,
       this.#missileTag,
       this.#slowTag,

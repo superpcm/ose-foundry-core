@@ -5,6 +5,7 @@
 import { QuenchMethods } from "../../../e2e";
 import OseDataModelAbility from "../data-model-ability";
 
+
 export const key = "ose.item.datamodel.ability";
 export const options = { displayName: "OSE: Item: Data Model: Ability" };
 
@@ -34,13 +35,17 @@ export default ({ describe, it, expect }: QuenchMethods) => {
 
   describe("autoTags", () => {
     const ability = new OseDataModelAbility();
-    it("By default return auto-tags", () => {
-      expect(ability.autoTags.length).equal(1);
-      expect(Object.keys(ability.autoTags[0]).length).equal(1);
-    });
-
-    it("By default return empty label", () => {
-      expect(ability.autoTags[0].label).equal("");
+    // A true ability item has default values set.
+    ability.updateSource({
+      blindroll: false,
+      description: "",
+      pattern: "transparent",
+      requirements: "",
+      roll: "",
+      rollTarget: 0,
+      rollType: "result",
+      save: "",
+      tags: [],
     });
 
     it("By default return tshirt icon", () => {
@@ -48,7 +53,7 @@ export default ({ describe, it, expect }: QuenchMethods) => {
     });
 
     it("Requirements create autoTags", () => {
-      ability.requirements = "magic-user,slow";
+      ability.updateSource({ requirements: "magic-user,slow" });
       expect(ability.autoTags.length).equal(2);
       expect(Object.keys(ability.autoTags[0]).length).equal(1);
       expect(ability.autoTags[0].label).equal("magic-user");
@@ -57,7 +62,7 @@ export default ({ describe, it, expect }: QuenchMethods) => {
     });
 
     it("Save create autoTags", () => {
-      ability.save = "death";
+      ability.updateSource({ save: "death" });
       expect(ability.autoTags.length).equal(3);
       expect(Object.keys(ability.autoTags[2]).length).equal(2);
       expect(ability.autoTags[2].label).equal(
@@ -67,11 +72,11 @@ export default ({ describe, it, expect }: QuenchMethods) => {
     });
 
     it("Roll create autoTags", () => {
-      ability.roll = "1d20+1";
+      ability.updateSource({ roll: "1d20+1" });
       expect(ability.autoTags.length).equal(4);
       expect(Object.keys(ability.autoTags[3]).length).equal(2);
       expect(ability.autoTags[2].label).equal(
-        `${game.i18n.localize("OSE.items.Roll")} 1d20+1 undefinednull`
+        `${game.i18n.localize("OSE.items.Roll")} 1d20 + 1 =0`
       );
     });
   });

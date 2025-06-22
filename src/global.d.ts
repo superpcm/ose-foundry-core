@@ -29,3 +29,17 @@ declare global {
     }
   }
 }
+
+type Override<Type, NewType extends { [key in keyof Type]?: NewType[key] }> = Omit<Type, keyof NewType> & NewType;
+
+type OseContextMenuEntry = Override<ContextMenuEntry, {
+  /**
+   * The function to call when the menu item is clicked. Receives the HTML element of the SidebarTab entry that this context menu is for.
+   */
+  callback: (target: HTMLElement) => void;
+
+  /**
+   * A function to call to determine if this item appears in the menu. Receives the HTML element of the SidebarTab entry that this context menu is for.
+   */
+  condition?: boolean | ((target: HTMLElement) => boolean);
+}>

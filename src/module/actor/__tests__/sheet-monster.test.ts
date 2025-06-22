@@ -5,13 +5,13 @@
 import { QuenchMethods } from "../../../e2e";
 import {
   cleanUpActorsByKey,
-  closeDialogs,
   closeSheets,
+  closeV2Dialogs,
   createActorTestItem,
   createMockActorKey,
   delay,
   getMockActorKey,
-  openDialogs,
+  openV2Dialogs,
   waitForInput,
 } from "../../../e2e/testUtils";
 import OseActorSheetMonster from "../monster-sheet";
@@ -105,21 +105,21 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
       actor?.sheet?.generateSave();
       await waitForInput();
 
-      const dialogs = openDialogs();
+      const dialogs = openV2Dialogs();
       expect(dialogs.length).equal(1);
       dialogs[0].close();
     });
 
     after(async () => {
       await cleanUpActorsByKey(key);
-      await closeDialogs();
+      await closeV2Dialogs();
       await delay(300);
     });
   });
 
   describe("_onDrop(event)", () => {
     const createMockRollTable = async () =>
-      RollTable.create({ name: "Test RollTable" });
+      CONFIG.RollTable.documentClass.create({ name: "Test RollTable" });
 
     after(async () => {
       await cleanUpActorsByKey(key);
@@ -132,11 +132,11 @@ export default ({ describe, it, expect, after, before }: QuenchMethods) => {
       const actor = await createMockActorKey("monster", {}, key);
       const rollTable = await createMockRollTable();
       actor?.sheet?.render(true);
-      await delay(300);
+      await delay(500); // Wait for sheet to render and the roll table to exist in the DOM
 
       // Setup DOM elements
       const dragElement = document.querySelector(
-        `.tab li[data-document-id=${rollTable?.id}]`
+        `#tables li[data-entry-id="${rollTable?.id}"]`
       );
       const dropElement = document.querySelector(`.monster .window-content`);
 

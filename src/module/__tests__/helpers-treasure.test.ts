@@ -3,7 +3,7 @@
  */
 // eslint-disable-next-line prettier/prettier, import/no-cycle
 import { QuenchMethods } from "../../e2e";
-import { trashChat, waitForInput } from "../../e2e/testUtils";
+import { rollSpecificNumber, trashChat, waitForInput } from "../../e2e/testUtils";
 import { functionsForTesting } from "../helpers-treasure";
 
 const { drawTreasure, rollTreasure } = functionsForTesting;
@@ -64,11 +64,14 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
       await waitForInput();
       expect(data.treasure).is.not.undefined;
       const resultKey = Object.keys(data.treasure)[0];
-      expect(data.treasure[resultKey].text).equal("100% Chance");
+      expect(data.treasure[resultKey].text).to.include("100% Chance");
     });
 
-    // @todo: volatile, may still draw due to 1% minimum, how to fix?
-    /* it("Draws unsuccessfully from a treasure table", async () => {
+    it("Draws unsuccessfully from a treasure table", async () => {
+      // Ensure the dice roll is greater than 1
+      const existingRandomFunction = CONFIG.Dice.randomUniform;
+      CONFIG.Dice.randomUniform = () => rollSpecificNumber(2, 100);
+
       const table = await createMockTreasureTable();
       await table.createEmbeddedDocuments("TableResult", [
         {
@@ -79,7 +82,10 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
       ]);
       const data = await drawTreasure(table, {});
       expect(Object.keys(data.treasure).length).equal(0);
-    }); */
+
+      // Restore the original random function
+      CONFIG.Dice.randomUniform = existingRandomFunction;
+    });
 
     it("Just draws from a non-treasure table", async () => {
       const table = await createMockTable();
@@ -94,7 +100,7 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
       await waitForInput();
       expect(data.treasure).is.not.undefined;
       const resultKey = Object.keys(data.treasure)[0];
-      expect(data.treasure[resultKey].text).equal("100% Chance");
+      expect(data.treasure[resultKey].text).to.include("100% Chance");
     });
   });
 

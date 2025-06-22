@@ -36,9 +36,9 @@
     <div class="tab" data-group="primary" data-tab="notes">
       <div class="inventory">
         <div class="item-category-title">{{localize "OSE.category.notes"}}</div>
-        <div class="resizable-editor" data-editor-size="320">
+        <div class="resizable-editor">
           {{editor enrichedBiography target="system.details.biography"
-          button=true editable=editable async=true}}
+          button=true editable=editable async=true engine="prosemirror"}}
         </div>
       </div>
     </div>

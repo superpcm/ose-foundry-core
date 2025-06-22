@@ -14,6 +14,7 @@ type Scores = {
   con: BaseScore;
   cha: BaseScore;
 };
+type OptionalScores = Partial<Scores>;
 
 type BaseScore = IncomingScore & { mod: number };
 
@@ -144,13 +145,13 @@ export default class OseDataModelCharacterScores implements CharacterScores {
    * @param {string} scores.con - The character's constitution
    * @param {string} scores.cha - The character's charisma
    */
-  constructor({ str, int, wis, dex, con, cha }: Scores) {
-    this.#str = str ?? 0;
-    this.#int = int ?? 0;
-    this.#wis = wis ?? 0;
-    this.#dex = dex ?? 0;
-    this.#con = con ?? 0;
-    this.#cha = cha ?? 0;
+  constructor({ str, int, wis, dex, con, cha }: OptionalScores = {}) {
+    this.#str = str ?? { value: 0, bonus: 0 };
+    this.#int = int ?? { value: 0, bonus: 0 };
+    this.#wis = wis ?? { value: 0, bonus: 0 };
+    this.#dex = dex ?? { value: 0, bonus: 0 };
+    this.#con = con ?? { value: 0, bonus: 0 };
+    this.#cha = cha ?? { value: 0, bonus: 0 };
   }
 
   get str() {
