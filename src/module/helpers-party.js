@@ -10,21 +10,28 @@ import OsePartySheet from "./party/party-sheet";
  */
 export const addControl = (object) => {
   const html = object.element;
+  if (html?.querySelector("button.ose-party-sheet")) {
+    // If the button already exists, do not add it again
+    return;
+  }
+
   const control = document.createElement("button");
   control.className = "ose-party-sheet";
   control.type = "button";
   control.title = game.i18n.localize("OSE.dialog.partysheet");
-  control.innerHTML = '<i class="fas fa-users"></i>';
+  const icon = document.createElement("i");
+  icon.className = "fas fa-users";
+  control.append(icon);
 
   const searchToggle = html.querySelector(".toggle-search-mode");
   if (searchToggle) {
+    control.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      Hooks.call("OSE.Party.showSheet");
+    });
+
     searchToggle.parentNode.insertBefore(control, searchToggle);
   }
-
-  control.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    Hooks.call("OSE.Party.showSheet");
-  });
 };
 
 export const update = (actor) => {
