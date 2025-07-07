@@ -13,7 +13,7 @@
       class="blinking"
       data-action="generate-scores"
       title="{{localize 'OSE.dialog.generateScores'}}"
-      ><i class="fa fa-dice"></i
+      ><i class="fa fa-dice-d6"></i
     ></a>
     {{/unless}}
   </div>
@@ -39,46 +39,35 @@
       />
       <label>{{localize 'OSE.RetainerWage'}}</label>
     </li>
-    {{else}}
-    <li>
-      <input
-        type="text"
-        name="system.details.title"
-        value="{{system.details.title}}"
-        data-dtype="String"
-      />
-      <label>{{localize 'OSE.details.title'}}</label>
-    </li>
     {{/if}}
     <li>
-      <input
-        type="text"
-        name="system.details.alignment"
-        value="{{system.details.alignment}}"
-        data-dtype="String"
-      />
+      <select name="system.details.alignment">
+        <option value="">{{localize "OSE.SelectAlignment"}}</option>
+        {{#each @root.config.alignments as |label key|}}
+        <option value="{{key}}" {{#if (eq key @root.system.details.alignment)}}selected{{/if}}>{{localize label}}</option>
+        {{/each}}
+      </select>
       <label>{{localize 'OSE.details.alignment'}}</label>
     </li>
   </ul>
   <ul class="summary flexrow">
     <li class="flex3">
-      <input
-        type="text"
-        name="system.details.class"
-        value="{{system.details.class}}"
-        data-dtype="String"
-      />
+      <select name="system.details.class">
+        <option value="">{{localize "OSE.SelectClass"}}</option>
+        {{#each @root.config.classes as |label key|}}
+        <option value="{{key}}" {{#if (eq key @root.system.details.class)}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
       <label>{{localize 'OSE.details.class'}}</label>
     </li>
     <li
       class="{{#if (gte system.details.xp.value system.details.xp.next)}}notify{{/if}}"
     >
-      <input
-        type="text"
-        name="system.details.level"
-        value="{{system.details.level}}"
-        data-dtype="Number"
-      />
+      <select name="system.details.level" data-dtype="Number">
+        {{#each @root.config.levels as |level|}}
+        <option value="{{level}}" {{#if (eq level @root.system.details.level)}}selected{{/if}}>{{level}}</option>
+        {{/each}}
+      </select>
       <label>{{localize 'OSE.details.level'}}</label>
     </li>
     <li class="flex2">

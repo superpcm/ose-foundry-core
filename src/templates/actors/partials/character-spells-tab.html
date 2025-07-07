@@ -30,7 +30,8 @@
         placeholder="0"
         readonly
         title="{{localize 'OSE.spells.MemorizedSlotsHint'}}"
-      />/<input
+      />/
+      <input
         type="text"
         value="{{lookup (lookup @root.system.spells.slots @key) 'max'}}"
         name="system.spells.{{id}}.max"
@@ -38,6 +39,11 @@
         placeholder="0"
         title="{{localize 'OSE.spells.MaximumSlotsHint'}}"
       />
+      {{#if (lookup (lookup @root.system.spells @key) 'bonus')}}
+      <span class="bonus-slots" title="Bonus from ability score"
+        >(+{{lookup (lookup @root.system.spells @key) 'bonus'}})</span
+      >
+      {{/if}}
     </div>
     <div class="item-controls">
       <a

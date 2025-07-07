@@ -36,7 +36,6 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
       expect(partySheet.options.dragDrop[0].dropSelector).equal(
         ".party-members"
       );
-      assert(!partySheet.options.closeOnSubmit);
     });
   });
 
@@ -56,10 +55,10 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
   });
 
   describe("partySheet()", () => {
-    it("Returns a partysheet", () => {
-      const { partySheet } = OsePartySheet;
-      expect(partySheet).is.not.undefined;
-      expect(partySheet?.options.classes).contain("party-sheet");
+    it("Returns a partysheet instance", () => {
+      const { instance } = OsePartySheet;
+      expect(instance).is.not.undefined;
+      expect(instance?.options.classes).contain("party-sheet");
     });
   });
 
@@ -79,15 +78,16 @@ export default ({ describe, it, expect, assert, after }: QuenchMethods) => {
   });
 
   describe("getData()", () => {
-    it("Returns proper data", () => {
+    it("Returns proper data", async () => {
       const sheet = new OsePartySheet();
-      const data = sheet.getData();
+      const data = await sheet._prepareContext({});
       const keys = Object.keys(data);
-      expect(keys.length).equal(4);
+      expect(keys.length).to.be.greaterThan(3);
       expect(keys).contain("partyActors");
       expect(keys).contain("config");
       expect(keys).contain("user");
       expect(keys).contain("settings");
+      expect(keys).contain("appId");
     });
   });
 

@@ -36,19 +36,13 @@ const OseDice = {
     await roll.evaluate({ allowStrings: true });
 
     // Convert the roll to a chat message and return the roll
-    let rollMode = game.settings.get("core", "rollMode");
-    rollMode = form ? form.rollMode.value : rollMode;
+    const rollMode = form?.rollMode.value ?? game.settings.get("core", "rollMode");
 
-    // Force blind roll (ability formulas)
-    if (!form && data.roll.blindroll) {
-      rollMode = game.user.isGM ? "selfroll" : "blindroll";
-    }
-
-    if (["gmroll", "blindroll"].includes(rollMode))
-      chatData.whisper = ChatMessage.getWhisperRecipients("GM");
-    if (rollMode === "selfroll") chatData.whisper = [game.user._id];
-    if (rollMode === "blindroll") {
-      chatData.blind = true;
+    const chatOptions = {
+      rollMode: data.roll.blindroll ? CONST.DICE_ROLL_MODES.BLIND : rollMode,
+    };
+    // For blind rolls, we need to ensure the data reflects it for the template.
+    if (chatOptions.rollMode === CONST.DICE_ROLL_MODES.BLIND) {
       data.roll.blindroll = true;
     }
 
@@ -66,16 +60,16 @@ const OseDice = {
                 roll,
                 game.user,
                 true,
-                chatData.whisper,
-                chatData.blind
+                ChatMessage.getWhisperRecipients("GM"),
+                chatOptions.rollMode === CONST.DICE_ROLL_MODES.BLIND
               )
               .then(() => {
-                if (chatMessage !== false) ChatMessage.create(chatData);
+                if (chatMessage !== false) ChatMessage.create(chatData, chatOptions);
                 resolve(roll);
               });
           } else {
             chatData.sound = CONFIG.sounds.dice;
-            if (chatMessage !== false) ChatMessage.create(chatData);
+            if (chatMessage !== false) ChatMessage.create(chatData, chatOptions);
             resolve(roll);
           }
         });
@@ -314,19 +308,13 @@ const OseDice = {
     await dmgRoll.evaluate();
 
     // Convert the roll to a chat message and return the roll
-    let rollMode = game.settings.get("core", "rollMode");
-    rollMode = form ? form.rollMode.value : rollMode;
+    const rollMode = form?.rollMode.value ?? game.settings.get("core", "rollMode");
 
-    // Force blind roll (ability formulas)
-    if (data.roll.blindroll) {
-      rollMode = game.user.isGM ? "selfroll" : "blindroll";
-    }
-
-    if (["gmroll", "blindroll"].includes(rollMode))
-      chatData.whisper = ChatMessage.getWhisperRecipients("GM");
-    if (rollMode === "selfroll") chatData.whisper = [game.user._id];
-    if (rollMode === "blindroll") {
-      chatData.blind = true;
+    const chatOptions = {
+      rollMode: data.roll.blindroll ? CONST.DICE_ROLL_MODES.BLIND : rollMode,
+    };
+    // For blind rolls, we need to ensure the data reflects it for the template.
+    if (chatOptions.rollMode === CONST.DICE_ROLL_MODES.BLIND) {
       data.roll.blindroll = true;
     }
 
@@ -346,8 +334,8 @@ const OseDice = {
                   roll,
                   game.user,
                   true,
-                  chatData.whisper,
-                  chatData.blind
+                  ChatMessage.getWhisperRecipients("GM"),
+                  chatOptions.rollMode === CONST.DICE_ROLL_MODES.BLIND
                 )
                 .then(() => {
                   if (templateData.result.isSuccess) {
@@ -357,21 +345,21 @@ const OseDice = {
                         dmgRoll,
                         game.user,
                         true,
-                        chatData.whisper,
-                        chatData.blind
+                        ChatMessage.getWhisperRecipients("GM"),
+                        chatOptions.rollMode === CONST.DICE_ROLL_MODES.BLIND
                       )
                       .then(() => {
-                        ChatMessage.create(chatData);
+                        ChatMessage.create(chatData, chatOptions);
                         resolve(roll);
                       });
                   } else {
-                    ChatMessage.create(chatData);
+                    ChatMessage.create(chatData, chatOptions);
                     resolve(roll);
                   }
                 });
             } else {
               chatData.sound = CONFIG.sounds.dice;
-              ChatMessage.create(chatData);
+              ChatMessage.create(chatData, chatOptions);
               resolve(roll);
             }
           });

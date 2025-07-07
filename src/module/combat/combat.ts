@@ -15,9 +15,9 @@ export const actionGroups = {
  * @todo Use a single chat card for rolling group initiative
  */
 export class OSECombat extends foundry.documents.Combat {
-  static FORMULA = "1d6 + @init";
+  static FORMULA = "1d20 + @init";
 
-  static GROUP_FORMULA = "1d6";
+  static GROUP_FORMULA = "1d20";
 
   static get GROUPS() {
     return {
@@ -300,6 +300,12 @@ export class OSECombat extends foundry.documents.Combat {
     const initiativeDiff = ib - ia;
 
     if (initiativeDiff !== 0) return initiativeDiff;
+
+    // Tie-breaker: initiative bonus.
+    const initA = a.actor?.system?.init ?? -Infinity;
+    const initB = b.actor?.system?.init ?? -Infinity;
+    const bonusDiff = initB - initA;
+    if (bonusDiff !== 0) return bonusDiff;
 
     // If still tied, sort by group name if available
     if (a.group?.name && b.group?.name && a.group?.name !== b.group?.name) {

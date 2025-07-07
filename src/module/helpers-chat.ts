@@ -138,9 +138,8 @@ export const addChatMessageButtons = (msg: ChatMessage, html: HTMLElement) => {
   // Hide blind rolls
   const blindable = html.querySelector(".blindable") as HTMLElement;
   if (
-    // @ts-ignore need to add ChatMessage document property updates.
-    msg?.blind &&
-    !game.user?.isGM &&
+    // Use modern V11+ property to check if content should be visible to the current user.
+    !msg.isContentVisible &&
     blindable &&
     blindable.dataset.blind === "true"
   ) {

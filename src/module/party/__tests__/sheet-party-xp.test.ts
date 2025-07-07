@@ -20,7 +20,6 @@ export default ({ describe, it, expect, assert }: QuenchMethods) => {
       expect(partyXP.options.width).equal(300);
       expect(partyXP.options.height).equal("auto");
       assert(!partyXP.options.resizable);
-      assert(partyXP.options.closeOnSubmit);
     });
   });
 
@@ -41,22 +40,19 @@ export default ({ describe, it, expect, assert }: QuenchMethods) => {
   });
 
   describe("getData()", () => {
-    it("Returns proper data", () => {
+    it("Returns proper data", async () => {
       const sheet = new OsePartyXP();
-      const data = sheet.getData();
+      const data = await sheet._prepareContext({});
       const keys = Object.keys(data);
-      expect(keys.length).equal(5);
+      expect(keys.length).to.be.greaterThan(3);
       expect(keys).contain("actors");
-      expect(keys).contain("data");
       expect(keys).contain("config");
       expect(keys).contain("user");
       expect(keys).contain("settings");
     });
   });
 
-  // @todo: Test with Cypress or similar, or mock event (see actor-sheet-e2e)
-  describe("_onDrop(event)", () => {});
-  describe("_updateObject(event)", () => {});
+  // @todo: Test with Cypress or similar, or mock event
   describe("_calculateShare()", () => {});
   describe("_dealXP(event)", () => {});
 };

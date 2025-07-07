@@ -61,22 +61,28 @@
         "spells": {
           "enabled": false,
           "1": {
-            "max": 0
+            "max": 0,
+            "bonus": 0
           },
           "2": {
-            "max": 0
+            "max": 0,
+            "bonus": 0
           },
           "3": {
-            "max": 0
+            "max": 0,
+            "bonus": 0
           },
           "4": {
-            "max": 0
+            "max": 0,
+            "bonus": 0
           },
           "5": {
-            "max": 0
+            "max": 0,
+            "bonus": 0
           },
           "6": {
-            "max": 0
+            "max": 0,
+            "bonus": 0
           }
         }
       }
@@ -90,7 +96,6 @@
         "biography": "",
         "notes": "",
         "class": "",
-        "title": "",
         "alignment": "",
         "level": 1,
         "xp": {
@@ -98,13 +103,18 @@
           "next": 2000,
           "value": 0,
           "bonus": 0
-        }
+        },
+        "combatTalents": { "max": 0 }
       },
-      "exploration": {
-        "ld": 1,
-        "od": 2,
-        "sd": 1,
-        "ft": 1
+      "thiefskills": {
+        "points": { "value": 0, "spent": 0 },
+        "climbSheerSurfaces": { "value": 1, "spent": 0 },
+        "findRemoveTraps": { "value": 1, "spent": 0 },
+        "hearNoise": { "value": 1, "spent": 0 },
+        "hideInShadows": { "value": 1, "spent": 0 },
+        "moveSilently": { "value": 1, "spent": 0 },
+        "openLocks": { "value": 1, "spent": 0 },
+        "pickPockets": { "value": 1, "spent": 0 }
       },
       "scores": {
         "str": {
@@ -212,7 +222,8 @@
       "templates": ["common", "physical", "equippable"],
       "ac": { "value": 9},
       "aac": { "value": 10 },
-      "type": "light"
+      "type": "light",
+      "dexCap": 99
     },
     "spell": {
       "templates": ["common", "rollable"],

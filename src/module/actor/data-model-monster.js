@@ -8,7 +8,7 @@ import OseDataModelCharacterMove from "./data-model-classes/data-model-character
 
 const getItemsOfActorOfType = (actor, filterType, filterFn = null) =>
   actor.items
-    .filter(({ type }) => type === filterType)
+    .filter((item) => item?.type === filterType)
     .filter(filterFn || (() => true));
 
 export default class OseDataModelMonster extends foundry.abstract.TypeDataModel {
@@ -48,44 +48,87 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
 
   // @todo define schema options; stuff like min/max values and so on.
   static defineSchema() {
-    const { StringField, NumberField, BooleanField, ObjectField, SchemaField } =
+    const { StringField, NumberField, BooleanField, ObjectField, SchemaField, ArrayField } =
       foundry.data.fields;
+    const spellLevelField = () =>
+      new SchemaField({
+        value: new NumberField({ integer: true, min: 0, initial: 0 }),
+        max: new NumberField({ integer: true, min: 0, initial: 0 }),
+        bonus: new NumberField({ integer: true, min: 0, initial: 0 }),
+      });
 
     return {
-      spells: new ObjectField(),
-      details: new ObjectField(),
-      ac: new ObjectField(),
-      aac: new ObjectField(),
-      encumbrance: new SchemaField({
-        value: new NumberField({ integer: false }),
-        max: new NumberField({ integer: false }),
+      spells: new SchemaField({
+        1: spellLevelField(),
+        2: spellLevelField(),
+        3: spellLevelField(),
+        4: spellLevelField(),
+        5: spellLevelField(),
+        6: spellLevelField(),
+        7: spellLevelField(),
       }),
-      movement: new ObjectField(),
-      config: new ObjectField(),
+      details: new SchemaField({
+        treasure: new SchemaField({
+          table: new StringField({ initial: "" }),
+        }),
+        biography: new StringField({ initial: "" }),
+        morale: new NumberField({ integer: true, min: 0, initial: 7 }),
+        appearing: new SchemaField({
+          w: new StringField({ initial: "1d4" }),
+          d: new StringField({ initial: "1d6" }),
+        }),
+      }),
+      ac: new SchemaField({
+        value: new NumberField({ integer: true, initial: 9 }),
+        mod: new NumberField({ integer: true, initial: 0 }),
+      }),
+      aac: new SchemaField({
+        value: new NumberField({ integer: true, initial: 10 }),
+        mod: new NumberField({ integer: true, initial: 0 }),
+      }),
+      encumbrance: new SchemaField({
+        value: new NumberField({ integer: false, initial: 0 }),
+        max: new NumberField({ integer: false, initial: 0 }),
+      }),
+      movement: new SchemaField({
+        base: new NumberField({ integer: true, initial: 120 }),
+      }),
+      config: new SchemaField({
+        movementAuto: new BooleanField({ initial: false }),
+      }),
       initiative: new SchemaField({
         value: new NumberField({ integer: false, initial: 0 }),
         mod: new NumberField({ integer: false, initial: 0 }),
       }),
       hp: new SchemaField({
-        hd: new StringField(),
-        value: new NumberField({ integer: true }),
-        max: new NumberField({ integer: true }),
+        hd: new StringField({ initial: "" }),
+        value: new NumberField({ integer: true, initial: 0 }),
+        max: new NumberField({ integer: true, initial: 0 }),
       }),
-      thac0: new ObjectField(),
-      languages: new ObjectField(),
-      saves: new SchemaField({
-        breath: new SchemaField({ value: new NumberField({ integer: true }) }),
-        death: new SchemaField({ value: new NumberField({ integer: true }) }),
-        paralysis: new SchemaField({
-          value: new NumberField({ integer: true }),
+      thac0: new SchemaField({
+        value: new NumberField({ integer: true, initial: 20 }),
+        bba: new NumberField({ integer: true, initial: -1 }),
+        mod: new SchemaField({
+          melee: new NumberField({ integer: true, initial: 0 }),
+          missile: new NumberField({ integer: true, initial: 0 }),
         }),
-        spell: new SchemaField({ value: new NumberField({ integer: true }) }),
-        wand: new SchemaField({ value: new NumberField({ integer: true }) }),
+      }),
+      languages: new SchemaField({
+        value: new ArrayField(new StringField(), { initial: [] }),
+      }),
+      saves: new SchemaField({
+        breath: new SchemaField({ value: new NumberField({ integer: true, initial: 0 }) }),
+        death: new SchemaField({ value: new NumberField({ integer: true, initial: 0 }) }),
+        paralysis: new SchemaField({
+          value: new NumberField({ integer: true, initial: 0 }),
+        }),
+        spell: new SchemaField({ value: new NumberField({ integer: true, initial: 0 }) }),
+        wand: new SchemaField({ value: new NumberField({ integer: true, initial: 0 }) }),
       }),
       retainer: new SchemaField({
-        enabled: new BooleanField(),
-        loyalty: new NumberField({ integer: true }),
-        wage: new StringField(),
+        enabled: new BooleanField({ initial: false }),
+        loyalty: new NumberField({ integer: true, initial: 0 }),
+        wage: new StringField({ initial: "" }),
       }),
     };
   }
@@ -108,7 +151,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "container",
-      ({ system: { containerId } }) => !containerId
+      (item) => item.system && !item.system.containerId
     );
   }
 
@@ -116,7 +159,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "item",
-      ({ system: { treasure, containerId } }) => treasure && !containerId
+      (item) => item.system?.treasure && !item.system?.containerId
     ).sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -124,7 +167,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "item",
-      ({ system: { treasure, containerId } }) => !treasure && !containerId
+      (item) => !item.system?.treasure && !item.system?.containerId
     ).sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -132,7 +175,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "weapon",
-      ({ system: { containerId } }) => !containerId
+      (item) => item.system && !item.system.containerId
     ).sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -140,7 +183,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "armor",
-      ({ system: { containerId } }) => !containerId
+      (item) => item.system && !item.system.containerId
     ).sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -148,7 +191,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "ability",
-      ({ system: { containerId } }) => !containerId
+      (item) => item.system && !item.system.containerId
     ).sort((a, b) => (a.sort || 0) - (b.sort || 0));
   }
 
@@ -174,7 +217,7 @@ export default class OseDataModelMonster extends foundry.abstract.TypeDataModel 
     return getItemsOfActorOfType(
       this.parent,
       "spell",
-      ({ system: { containerId } }) => !containerId
+      (item) => item.system && !item.system.containerId
     );
   }
 

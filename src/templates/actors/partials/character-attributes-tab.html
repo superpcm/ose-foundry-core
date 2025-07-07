@@ -7,8 +7,11 @@
                     <a>{{ localize "OSE.scores.str.short" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.scores.str.value" type="text" value="{{system.scores.str.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <select name="system.scores.str.value" data-dtype="Number">
+                        {{#each @root.config.scores as |score|}}
+                        <option value="{{score}}" {{#if (eq score @root.system.scores.str.value)}}selected{{/if}}>{{score}}</option>
+                        {{/each}}
+                    </select>
                 </div>
             </li>
             <li class="attribute ability-score" data-score="int">
@@ -16,8 +19,11 @@
                     <a>{{ localize "OSE.scores.int.short" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.scores.int.value" type="text" value="{{system.scores.int.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <select name="system.scores.int.value" data-dtype="Number">
+                        {{#each @root.config.scores as |score|}}
+                        <option value="{{score}}" {{#if (eq score @root.system.scores.int.value)}}selected{{/if}}>{{score}}</option>
+                        {{/each}}
+                    </select>
                 </div>
             </li>
             <li class="attribute ability-score" data-score="wis">
@@ -25,8 +31,11 @@
                     <a>{{ localize "OSE.scores.wis.short" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.scores.wis.value" type="text" value="{{system.scores.wis.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <select name="system.scores.wis.value" data-dtype="Number">
+                        {{#each @root.config.scores as |score|}}
+                        <option value="{{score}}" {{#if (eq score @root.system.scores.wis.value)}}selected{{/if}}>{{score}}</option>
+                        {{/each}}
+                    </select>
                 </div>
             </li>
             <li class="attribute ability-score" data-score="dex">
@@ -34,8 +43,11 @@
                     <a>{{ localize "OSE.scores.dex.short" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.scores.dex.value" type="text" value="{{system.scores.dex.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <select name="system.scores.dex.value" data-dtype="Number">
+                        {{#each @root.config.scores as |score|}}
+                        <option value="{{score}}" {{#if (eq score @root.system.scores.dex.value)}}selected{{/if}}>{{score}}</option>
+                        {{/each}}
+                    </select>
                 </div>
             </li>
             <li class="attribute ability-score" data-score="con">
@@ -43,8 +55,11 @@
                     <a>{{ localize "OSE.scores.con.short" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.scores.con.value" type="text" value="{{system.scores.con.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <select name="system.scores.con.value" data-dtype="Number">
+                        {{#each @root.config.scores as |score|}}
+                        <option value="{{score}}" {{#if (eq score @root.system.scores.con.value)}}selected{{/if}}>{{score}}</option>
+                        {{/each}}
+                    </select>
                 </div>
             </li>
             <li class="attribute ability-score" data-score="cha">
@@ -52,8 +67,11 @@
                     <a>{{ localize "OSE.scores.cha.short" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.scores.cha.value" type="text" value="{{system.scores.cha.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <select name="system.scores.cha.value" data-dtype="Number">
+                        {{#each @root.config.scores as |score|}}
+                        <option value="{{score}}" {{#if (eq score @root.system.scores.cha.value)}}selected{{/if}}>{{score}}</option>
+                        {{/each}}
+                    </select>
                 </div>
             </li>
             {{#if system.retainer.enabled}}
@@ -209,40 +227,40 @@
                     <a>{{ localize "OSE.saves.death.long" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.saves.death.value" type="text" value="{{system.saves.death.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <input name="system.saves.death.value" type="text" value="{{system.saves.death.value}}" placeholder="0" data-dtype="Number" readonly title="Auto-calculated from class and level" />
+                </div>
             </li>
             <li class="attribute saving-throw" data-save="wand">
                 <h4 class="attribute-name box-title">
                     <a>{{ localize "OSE.saves.wand.long" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.saves.wand.value" type="text" value="{{system.saves.wand.value}}" placeholder="0"
-                        data-dtype="Number" />
+                    <input name="system.saves.wand.value" type="text" value="{{system.saves.wand.value}}" placeholder="0" data-dtype="Number" readonly title="Auto-calculated from class and level" />
+                </div>
             </li>
             <li class="attribute saving-throw" data-save="paralysis">
                 <h4 class="attribute-name box-title">
                     <a>{{ localize "OSE.saves.paralysis.long" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.saves.paralysis.value" type="text" value="{{system.saves.paralysis.value}}"
-                        placeholder="0" data-dtype="Number" />
+                    <input name="system.saves.paralysis.value" type="text" value="{{system.saves.paralysis.value}}" placeholder="0" data-dtype="Number" readonly title="Auto-calculated from class and level" />
+                </div>
             </li>
             <li class="attribute saving-throw" data-save="breath">
                 <h4 class="attribute-name box-title">
                     <a>{{ localize "OSE.saves.breath.long" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.saves.breath.value" type="text" value="{{system.saves.breath.value}}"
-                        placeholder="0" data-dtype="Number" />
+                    <input name="system.saves.breath.value" type="text" value="{{system.saves.breath.value}}" placeholder="0" data-dtype="Number" readonly title="Auto-calculated from class and level" />
+                </div>
             </li>
             <li class="attribute saving-throw" data-save="spell">
                 <h4 class="attribute-name box-title">
                     <a>{{ localize "OSE.saves.spell.long" }}</a>
                 </h4>
                 <div class="attribute-value">
-                    <input name="system.saves.spell.value" type="text" value="{{system.saves.spell.value}}"
-                        placeholder="0" />
+                    <input name="system.saves.spell.value" type="text" value="{{system.saves.spell.value}}" placeholder="0" data-dtype="Number" readonly title="Auto-calculated from class and level" />
+                </div>
             </li>
             <li class="attribute saving-throw">
                 <h4 class="attribute-name box-title" title="{{ localize 'OSE.saves.magic.long' }}">
@@ -254,3 +272,24 @@
         </ul>
     </div>
 </section>
+{{#if system.thiefskills.usesThiefSkills}}
+<div class="thiefskills flexcol">
+  {{#with system.thiefskills as |skills|}}
+    <div class="panel-title">
+      <h4>{{localize "OSE.category.thiefskills"}}</h4>
+      <div class="skill-points">Points: {{skills.points.spent}} / {{skills.points.value}}</div>
+    </div>
+    {{#each (objectEntries skills) as |entry|}}
+      {{#unless (or (eq entry.key "points") (eq entry.key "usesThiefSkills"))}}
+      <div class="attribute" data-skill="{{entry.key}}">
+        <a class="attribute-name rollable">{{localize (concat "OSE.thiefskill." entry.key)}}</a>
+        <div class="attribute-value">
+          <input type="text" value="{{entry.value.value}}" data-dtype="Number" readonly />
+          <span> in 6</span>
+        </div>
+      </div>
+      {{/unless}}
+    {{/each}}
+  {{/with}}
+</div>
+{{/if}}

@@ -2,6 +2,7 @@
  * @file The sheet class for Actors of type Monster
  */
 import OSE from "../config";
+import logger from "../logger.js";
 import OseActorSheet from "./actor-sheet";
 
 
@@ -32,57 +33,38 @@ export default class OseActorSheetMonster extends OseActorSheet {
   }
 
   /**
-   * Organize and classify Owned Items for Character sheets
-   *
-   * @param data
-   * @private
-   */
-  _prepareItems(data) {
-    // Assign and return
-    data.owned = {
-      weapons: this.actor.system.weapons,
-      items: this.actor.system.items,
-      containers: this.actor.system.containers,
-      armors: this.actor.system.armor,
-      treasures: this.actor.system.treasures,
-    };
-
-    data.attackPatterns = this.actor.system.attackPatterns;
-    data.spells = this.actor.system.spells.spellList;
-  }
-
-  /**
    * Prepare data for rendering the Actor sheet
    * The prepared data object contains both the actor data as well as additional sheet options
    */
-  async getData() {
-    const data = await super.getData();
-    // Prepare owned items
-    this._prepareItems(data);
-
-    const monsterData = data?.system;
+  async _prepareContext(options) {
+    logger.debug(`Preparing monster context for ${this.actor.name}`);
+    const context = await super._prepareContext(options);
+    const monsterData = context?.system;
 
     // Settings
-    data.config.morale = game.settings.get(game.system.id, "morale");
-    monsterData.details.treasure.link =
-      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        monsterData.details.treasure.table,
-        { async: true }
-      );
-    data.isNew = this.actor.isNew();
+    context.config.morale = game.settings.get(game.system.id, "morale");
+    if (monsterData.details.treasure) {
+      monsterData.details.treasure.link =
+        await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          monsterData.details.treasure.table,
+          { async: true }
+        );
+    }
+    context.isNew = this.actor.isNew();
 
-    data.enrichedBiography =
+    context.enrichedBiography =
       await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        this.object.system.details.biography,
+        this.object.system.details.biography || "",
         { async: true }
       );
-    return data;
+    return context;
   }
 
   /**
    * Monster creation helpers
    */
   async generateSave() {
+    logger.info(`Generating saves for monster ${this.actor.name}`);
     const choices = CONFIG.OSE.monster_saves;
 
     const templateData = { choices };
@@ -121,15 +103,20 @@ export default class OseActorSheetMonster extends OseActorSheet {
   }
 
   async _onDrop(event) {
-    super._onDrop(event);
+    logger.debug(`Drop event on monster sheet for ${this.actor.name}`);
     let data;
     try {
       data = JSON.parse(event.dataTransfer.getData("text/plain"));
-      if (data.type !== "RollTable") return;
     } catch (error) {
-      return false;
+      // If data is not a JSON string, it's not for us.
+      // Let the super method handle it.
+      return super._onDrop(event);
     }
 
+    // If it's not a RollTable, let the super method handle it.
+    if (data.type !== "RollTable") return super._onDrop(event);
+
+    // It's a RollTable, handle it here.
     let link = "";
     if (data.pack) {
       const tableDatum = game.packs
@@ -144,6 +131,7 @@ export default class OseActorSheetMonster extends OseActorSheet {
 
   /* -------------------------------------------- */
   async _resetAttacks(event) {
+    logger.info(`Resetting attacks for ${this.actor.name}`);
     return Promise.all(
       this.actor.items
         .filter((i) => i.type === "weapon")
@@ -157,6 +145,7 @@ export default class OseActorSheetMonster extends OseActorSheet {
 
   async _updateAttackCounter(event) {
     event.preventDefault();
+    logger.debug(`Updating attack counter for ${this.actor.name}`);
     const item = this._getItemFromActor(event);
 
     if (event.target.dataset.field === "value") {
@@ -173,6 +162,7 @@ export default class OseActorSheetMonster extends OseActorSheet {
 
   _cycleAttackPatterns(event) {
     const item = super._getItemFromActor(event);
+    logger.debug(`Cycling attack pattern for item ${item.name} on ${this.actor.name}`);
     const currentColor = item.system.pattern;
     // Attack patterns include all OSE colors and transparent
     const colors = Object.keys(CONFIG.OSE.colors);

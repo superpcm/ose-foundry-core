@@ -2,10 +2,11 @@
  * @file The base class we use for Character and Monster sheets. Shared behavior goes here!
  */
 import OSE from "../config";
+import logger from "../logger.js";
 import OseEntityTweaks from "../dialog/entity-tweaks";
 import skipRollDialogCheck from "../helpers-behaviour";
 
-export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
+export default class OseActorSheet extends foundry.applications.sheets.ActorSheetV2 {
   /**
    * IDs for items on the sheet that have been expanded.
    * @type {Set<string>}
@@ -13,26 +14,19 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
    */
   _expanded = new Set();
 
-  async getData() {
-    const data = foundry.utils.deepClone(super.getData().data);
-    for (const i of this.actor.items) {
-      const isExpanded = this._expanded.has(i.id);
-      i.isExpanded = isExpanded;
-      if (isExpanded) {
-        await i.prepareDerivedData();
-      }
-    }
-    for (const i of data.items) {
-      const isExpanded = this._expanded.has(i.id);
-      i.isExpanded = isExpanded;
-      if (isExpanded) {
-        await i.prepareDerivedData();
-      }
-    }
-    data.owner = this.actor.isOwner;
-    data.editable = this.actor.sheet.isEditable;
+  async _prepareContext(options) {
+    logger.debug(`Preparing context for ${this.actor.name}`, { options });
+    const context = await super._prepareContext(options);
 
-    data.config = {
+    // V2 migration: The context's `system` property is the source data, not the derived data model.
+    // We need to replace it with the derived data model so that getters are available in the template.
+    context.system = this.actor.system;
+
+    for (const i of context.items) {
+      i.isExpanded = this._expanded.has(i.id);
+    }
+
+    context.config = {
       ...CONFIG.OSE,
       ascendingAC: game.settings.get(game.system.id, "ascendingAC"),
       initiative: game.settings.get(game.system.id, "initiative") !== "group",
@@ -41,9 +35,10 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
         game.settings.get(game.system.id, "encumbranceItemStrengthMod") &&
         game.settings.get(game.system.id, "encumbranceOption") === "itembased",
     };
-    data.isNew = this.actor.isNew();
+    context.isNew = this.actor.isNew();
 
-    return data;
+    logger.debug(`Context for ${this.actor.name}:`, context);
+    return context;
   }
 
   activateEditor(name, options, initialContent) {
@@ -117,6 +112,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
 
   async _displayItemInChat(event) {
     const li = $(event.currentTarget).closest(".item-entry");
+    logger.info(`Displaying item in chat for actor ${this.actor.name}`, { item: li.data("itemId") });
     const item = this.actor.items.get(li.data("itemId"));
     item.show();
   }
@@ -124,6 +120,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   // eslint-disable-next-line no-underscore-dangle, consistent-return
   async _removeItemFromActor(item) {
     if (item.type === "ability" || item.type === "spell") {
+      logger.info(`Deleting ability/spell ${item.name} from ${this.actor.name}`);
       // eslint-disable-next-line no-underscore-dangle
       return this.actor.deleteEmbeddedDocuments("Item", [item._id]);
     }
@@ -132,6 +129,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
       const newItemIds = this.actor.items
         .get(containerId)
         .system.itemIds.filter((o) => o !== item.id);
+      logger.info(`Removing item ${item.name} from container ${containerId}`);
 
       await this.actor.updateEmbeddedDocuments("Item", [
         { _id: containerId, system: { itemIds: newItemIds } },
@@ -139,6 +137,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
     }
     if (item.type === "container" && item.system.itemIds) {
       const containedItems = item.system.itemIds;
+      logger.info(`Emptying container ${item.name} before deletion`);
       const updateData = containedItems.reduce((acc, val) => {
         // Only create update data for items that still exist on the actor
         if (this.actor.items.get(val))
@@ -149,6 +148,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
       await this.actor.updateEmbeddedDocuments("Item", updateData);
     }
 
+    logger.info(`Deleting item ${item.name} from ${this.actor.name}`);
     // eslint-disable-next-line no-underscore-dangle
     this.actor.deleteEmbeddedDocuments("Item", [item._id]);
   }
@@ -159,6 +159,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
    */
   _useConsumable(event, decrement) {
     const item = this._getItemFromActor(event);
+    logger.info(`Using consumable ${item?.name} for ${this.actor.name}`);
     if (!item) return null;
     let {
       quantity: { value: quantity },
@@ -171,6 +172,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   async _onSpellChange(event) {
     event.preventDefault();
     const item = this._getItemFromActor(event);
+    logger.info(`Changing spell ${item?.name} for ${this.actor.name}`);
     if (event.target.dataset.field === "cast") {
       return item.update({ "system.cast": parseInt(event.target.value) });
     }
@@ -184,6 +186,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   async _resetSpells(event) {
     const spellsContainer = event.currentTarget.closest(".inventory.spells");
     const spellElements = spellsContainer.querySelectorAll(".item-entry");
+    logger.info(`Resetting spells for ${this.actor.name}`);
 
     const updates = [];
     for (const el of spellElements) {
@@ -206,6 +209,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   async _rollAbility(event) {
     const item = this._getItemFromActor(event);
     const itemData = item?.system;
+    logger.info(`Rolling ability/item ${item?.name} for ${this.actor.name}`);
     if (item.type === "weapon") {
       if (this.actor.type === "monster") {
         await item.update({
@@ -223,6 +227,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   async _rollSave(event) {
     const actorObject = this.actor;
     const element = event.currentTarget;
+    logger.info(`Rolling save for ${this.actor.name}`, { save: element.parentElement.parentElement.dataset.save });
     const { save } = element.parentElement.parentElement.dataset;
     actorObject.rollSave(save, { event });
   }
@@ -230,6 +235,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   async _rollAttack(event) {
     const actorObject = this.actor;
     const element = event.currentTarget;
+    logger.info(`Rolling attack for ${this.actor.name}`, { attack: element.parentElement.parentElement.dataset.attack });
     const { attack } = element.parentElement.parentElement.dataset;
     actorObject.targetAttack({ roll: {} }, attack, {
       type: attack,
@@ -238,19 +244,23 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   _onSortItem(event, itemData) {
-    const source = this.actor.items.get(itemData._id);
+    logger.debug(`Sorting item for ${this.actor.name}`, { itemData });
+    const source = this.actor.items.get(itemData.id);
     const siblings = this.actor.items.filter(
-      (i) => i.data._id !== source.data._id
+      (i) => i.id !== source.id
     );
     const dropTarget = event.target.closest("[data-item-id]");
     const targetId = dropTarget ? dropTarget.dataset.itemId : null;
-    const target = siblings.find((s) => s.data._id === targetId);
-    if (!target) throw new Error(`Couldn't drop near ${event.target}`);
+    const target = siblings.find((s) => s.id === targetId);
+    if (!target) {
+      logger.warn(`Could not find drop target for sorting near`, event.target);
+      return;
+    }
     const targetData = target?.system;
 
     // Dragging items into a container
     if (
-      (target?.type === "container" || target?.data?.type === "container") &&
+      target?.type === "container" &&
       targetData.containerId === ""
     ) {
       this.actor.updateEmbeddedDocuments("Item", [
@@ -269,6 +279,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
 
   _onDragStart(event) {
     const li = event.currentTarget;
+    logger.debug(`Drag start on actor sheet for ${this.actor.name}`, { element: li });
     let itemIdsArray = [];
     if (event.target.classList.contains("content-link")) return;
 
@@ -296,7 +307,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
     if (li.dataset.effectId) {
       const effect = this.actor.effects.get(li.dataset.effectId);
       dragData.type = "ActiveEffect";
-      dragData.data = effect.data;
+      dragData.data = effect.toObject();
     }
 
     // Set data transfer
@@ -315,6 +326,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
 
   // eslint-disable-next-line no-underscore-dangle
   async _onDropFolder(event, data) {
+    logger.debug(`Dropping folder on actor sheet for ${this.actor.name}`, { data });
     const folder = await fromUuid(data.uuid);
     if (!folder || folder.type !== "Item") return;
 
@@ -338,6 +350,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
 
   // eslint-disable-next-line no-underscore-dangle
   async _onDropItem(event, data) {
+    logger.debug(`Dropping item on actor sheet for ${this.actor.name}`, { data, target: event.target });
     const targetId = event.target.closest(".item")?.dataset?.itemId;
     const targetItem = this.actor.items.get(targetId);
     const targetIsContainer = targetItem?.type === "container";
@@ -365,6 +378,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   async _onContainerItemRemove(item, container) {
+    logger.info(`Removing item ${item.name} from container ${container.name}`);
     const newList = container.system.itemIds.filter((s) => s != item.id);
     const itemObj = this.object.items.get(item.id);
     await container.update({ system: { itemIds: newList } });
@@ -372,6 +386,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   async _onContainerItemAdd(item, target) {
+    logger.info(`Adding item ${item.name} to container ${target.name}`);
     const alreadyExistsInActor = target.parent.items.find(
       (i) => i.id === item.id
     );
@@ -393,42 +408,68 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   }
 
   // eslint-disable-next-line no-underscore-dangle, consistent-return
-  async _onDropItemCreate(droppedItem, targetContainer = false) {
-    // override to fix hidden items because their original containers don't exist on this actor
-    const droppedItemArray = Array.isArray(droppedItem)
-      ? droppedItem
-      : [droppedItem];
-    droppedItemArray.forEach((item) => {
-      if (item.system.containerId && item.system.containerId !== "")
-        // eslint-disable-next-line no-param-reassign
-        item.system.containerId = "";
-      if (
-        item.type === "container" &&
-        typeof item.system.itemIds === "string"
-      ) {
-        // itemIds was double stringified to fix strange behavior with stringify blanking our Arrays
-        const containedItems = JSON.parse(item.system.itemIds);
-        containedItems.forEach((containedItem) => {
-          // eslint-disable-next-line no-param-reassign
-          containedItem.system.containerId = "";
-        });
-        droppedItem.push(...containedItems);
+  async _onDropItemCreate(droppedItemData, targetContainer = false) {
+    logger.info(`Creating dropped item(s) on ${this.actor.name}`, { droppedItemData, targetContainer });
+
+    const itemsToCreate = [];
+    const itemsToProcess = Array.isArray(droppedItemData) ? [...droppedItemData] : [droppedItemData];
+
+    // Use a while loop to safely process items from a queue, avoiding array modification during iteration.
+    while (itemsToProcess.length > 0) {
+      const itemData = itemsToProcess.shift();
+
+      // Ensure containerId is cleared so it doesn't think it belongs to a non-existent container.
+      if (itemData.system) {
+        itemData.system.containerId = "";
       }
-    });
-    if (!targetContainer) {
-      return this.actor.createEmbeddedDocuments("Item", droppedItem);
+
+      // If the item is a container with contents, unpack them.
+      if (itemData.type === "container" && itemData.system?.itemIds) {
+        let containedItemsData;
+        // Safely parse the contained items. It might be a stringified JSON array.
+        if (typeof itemData.system.itemIds === "string") {
+          try {
+            containedItemsData = JSON.parse(itemData.system.itemIds);
+          } catch (e) {
+            logger.warn(`Could not parse contained item IDs for container ${itemData.name}`, e);
+            containedItemsData = [];
+          }
+        } else if (Array.isArray(itemData.system.itemIds)) {
+          containedItemsData = itemData.system.itemIds;
+        }
+
+        if (Array.isArray(containedItemsData)) {
+          // Add the unpacked items to the front of the processing queue.
+          itemsToProcess.unshift(...containedItemsData);
+        }
+
+        // Clear the itemIds from the container data itself, as we are creating them as separate items.
+        itemData.system.itemIds = [];
+      }
+      itemsToCreate.push(itemData);
     }
 
-    const { itemIds } = targetContainer.system;
-    itemIds.push(droppedItem.id);
-    const item = this.actor.items.get(droppedItem[0].id);
-    await targetContainer.update({ system: { itemIds } });
-    return item.update({ system: { containerId: targetContainer.id } });
+    if (itemsToCreate.length === 0) return [];
+
+    // Now, create all the unpacked items.
+    const createdDocuments = await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
+
+    // If there's a target container on the sheet, move the top-level dropped item into it.
+    if (targetContainer && createdDocuments.length > 0) {
+      const mainDroppedItem = createdDocuments[0];
+      const { itemIds } = targetContainer.system;
+      itemIds.push(mainDroppedItem.id);
+      await targetContainer.update({ system: { itemIds } });
+      await mainDroppedItem.update({ system: { containerId: targetContainer.id } });
+    }
+
+    return createdDocuments;
   }
 
   /* -------------------------------------------- */
 
   async _chooseItemType(choices = ["weapon", "armor", "shield", "gear"]) {
+    logger.debug("Choosing item type for creation");
     const templateData = {
       types: choices.reduce((obj, choice) => {
         obj[choice] = choice;
@@ -468,6 +509,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
   // eslint-disable-next-line no-underscore-dangle
   _createItem(event) {
     event.preventDefault();
+    logger.info(`Creating item for ${this.actor.name}`);
     const header = event.currentTarget;
     const { treasure, type, lvl } = header.dataset;
     const createItem = (type, name) => ({
@@ -493,6 +535,7 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
 
   async _updateItemQuantity(event) {
     event.preventDefault();
+    logger.debug(`Updating item quantity for ${this.actor.name}`);
     const item = this._getItemFromActor(event);
 
     if (event.target.dataset.field === "value") {
@@ -507,83 +550,34 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
     }
   }
 
-  // Override to set resizable initial size
-  // eslint-disable-next-line no-underscore-dangle
-  async _renderInner(...args) {
-    const html = await super._renderInner(...args);
-    this.form = html[0];
-
-    // Resize resizable classes
-    const resizable = html.find(".resizable");
-    if (resizable.length === 0) {
-      return;
-    }
-    resizable.each((_, el) => {
-      const heightDelta = this.position.height - this.options.height;
-      el.style.height = `${heightDelta + parseInt(el.dataset.baseSize)}px`;
-    });
-    return html;
-  }
-
-  // eslint-disable-next-line no-underscore-dangle
-  async _onResize(event) {
-    // eslint-disable-next-line no-underscore-dangle
-    super._onResize(event);
-
-    const html = $(this.form);
-    const resizable = html.find(".resizable");
-    if (resizable.length === 0) {
-      return;
-    }
-    // Resize divs
-    resizable.each((_, el) => {
-      const heightDelta = this.position.height - this.options.height;
-      el.style.height = `${heightDelta + parseInt(el.dataset.baseSize)}px`;
-    });
-    // Resize editors
-    const editors = html.find(".editor");
-    editors.each((id, editor) => {
-      const container = editor.closest(".resizable-editor");
-      if (container) {
-        const heightDelta = this.position.height - this.options.height;
-        editor.style.height = `${
-          heightDelta + parseInt(container.dataset.editorSize)
-        }px`;
-      }
-    });
-  }
-
   // eslint-disable-next-line no-underscore-dangle
   _onConfigureActor(event) {
     event.preventDefault();
+    logger.info(`Opening tweaks dialog for ${this.actor.name}`);
     new OseEntityTweaks(this.actor, {
-      top: this.position.top + 40,
-      left: this.position.left + (this.position.width - 400) / 2,
+      position: {
+        top: this.position.top + 40,
+        left: this.position.left + (this.position.width - 400) / 2,
+      },
     }).render(true);
   }
 
-  /**
-   * Extend and override the sheet header buttons
-   *
-   * @override
-   */
-  _getHeaderButtons() {
-    let buttons = super._getHeaderButtons();
+  async _render(force, options) {
+    await super._render(force, options);
 
-    // Token Configuration
+    // V13 Compatibility: Manually inject the header button for dynamic visibility.
     const canConfigure = game.user.isGM || this.actor.isOwner;
-    if (this.options.editable && canConfigure) {
-      buttons = [
-        {
-          label: game.i18n.localize("OSE.dialog.tweaks"),
-          class: "configure-actor",
-          icon: "fas fa-code",
-          onclick: (event) => this._onConfigureActor(event),
-        },
-        ...buttons,
-      ];
+    if (this.isEditable && canConfigure) {
+      const title = this.element.querySelector(".window-title");
+      // Prevent adding the button multiple times on re-renders.
+      if (title && !this.element.querySelector(".configure-actor")) {
+        const button = document.createElement("a");
+        button.classList.add("header-button", "configure-actor");
+        button.innerHTML = `<i class="fas fa-code"></i> ${game.i18n.localize("OSE.dialog.tweaks")}`;
+        button.addEventListener("click", this._onConfigureActor.bind(this));
+        title.after(button);
+      }
     }
-    return buttons;
   }
 
   activateListeners(html) {
@@ -645,13 +639,25 @@ export default class OseActorSheet extends foundry.appv1.sheets.ActorSheet {
       if (item?.type !== "container" || !item?.system?.itemIds?.length > 0)
         return this._removeItemFromActor(item);
 
-      Dialog.confirm({
-        title: game.i18n.localize("OSE.dialog.deleteContainer"),
-        content: game.i18n.localize("OSE.dialog.confirmDeleteContainer"),
-        yes: () => {
-          this._removeItemFromActor(item);
+      new foundry.applications.api.DialogV2({
+        window: {
+          title: game.i18n.localize("OSE.dialog.deleteContainer"),
         },
-        defaultYes: false,
+        content: `<p>${game.i18n.localize(
+          "OSE.dialog.confirmDeleteContainer"
+        )}</p>`,
+        buttons: [
+          {
+            action: "yes",
+            label: game.i18n.localize("CONFIRM.Yes"),
+            callback: () => this._removeItemFromActor(item),
+          },
+          {
+            action: "no",
+            label: game.i18n.localize("CONFIRM.No"),
+            default: true,
+          },
+        ],
       });
     });
 

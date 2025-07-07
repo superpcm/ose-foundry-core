@@ -46,7 +46,7 @@ export default ({ describe, it, expect, after }: QuenchMethods) => {
       await actor?.setFlag(game.system.id, "party", true);
       update(actor);
       await waitForInput();
-      await OsePartySheet?.partySheet?.render(true);
+      await OsePartySheet?.instance?.render(true);
       await waitForInput();
       const partyMember = document
         .querySelector(".party-members .actor")

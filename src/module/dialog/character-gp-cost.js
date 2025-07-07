@@ -4,10 +4,11 @@
 // eslint-disable-next-line no-unused-vars
 import OSE from "../config";
 
-export default class OseCharacterGpCost extends FormApplication {
-  constructor(event, preparedData, position) {
-    super(event, position);
-    this.object.preparedData = preparedData;
+export default class OseCharacterGpCost extends foundry.applications.api.ApplicationV2 {
+  constructor(options = {}) {
+    super(options);
+    this.actor = options.actor;
+    this.preparedData = options.preparedData;
   }
 
   static get defaultOptions() {
@@ -28,7 +29,7 @@ export default class OseCharacterGpCost extends FormApplication {
    * @returns {string} - A localized window title
    */
   get title() {
-    return `${this.object.name}: ${game.i18n.localize(
+    return `${this.actor.name}: ${game.i18n.localize(
       "OSE.dialog.shoppingCart"
     )}`;
   }
@@ -40,88 +41,11 @@ export default class OseCharacterGpCost extends FormApplication {
    *
    * @returns {object} - The template data
    */
-  async getData() {
-    const data = await foundry.utils.deepClone(this.object.preparedData);
+  async _prepareContext() {
+    const data = await foundry.utils.deepClone(this.preparedData);
     data.totalCost = await this.#getTotalCost(data);
     data.user = game.user;
-    this.inventory = this.object.items;
     return data;
-  }
-
-  async close(options) {
-    return super.close(options);
-  }
-
-  /**
-   * An object that provides options to _onSubmit
-   *
-   * @typedef submitOptions
-   * @property {boolean} preventClose - Should the application be stopped from closing?
-   * @property {boolean} preventRender - Should the application be stopped from rendering?
-   */
-
-  /**
-   * Override Foundry's default _onSubmit event to add our own behaviors
-   *
-   * @param {Event} event - The native form submit event
-   * @param {submitOptions} options - Options for the _onSubmit event
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  async _onSubmit(event, { preventClose = false, preventRender = false } = {}) {
-    // eslint-disable-next-line no-underscore-dangle
-    super._onSubmit(event, {
-      preventClose,
-      preventRender,
-    });
-    // Generate gold
-    const totalCost = await this.#getTotalCost(await this.getData());
-    const gp = await this.object.items.find((item) => {
-      const itemData = item.system;
-      return (
-        (item.name === game.i18n.localize("OSE.items.gp.short") ||
-          item.name === "GP") && // legacy behavior used GP, even for other languages
-        itemData.treasure
-      );
-    });
-    if (!gp) {
-      ui.notifications.error(game.i18n.localize("OSE.error.noGP"));
-      return;
-    }
-    const newGP = gp.system.quantity.value - totalCost;
-    if (newGP >= 0) {
-      this.object.updateEmbeddedDocuments("Item", [
-        { _id: gp.id, "system.quantity.value": newGP },
-      ]);
-    } else {
-      ui.notifications.error(game.i18n.localize("OSE.error.notEnoughGP"));
-    }
-  }
-
-  /**
-   * This method is called upon form submission after form data is validated
-   *
-   * @param {Event} event - The initial triggering submission event
-   * @param {object} formData - The object of validated form data with which to update the object
-   * @private
-   */
-  async _updateObject(event, formData) {
-    event.preventDefault();
-
-    const speaker = ChatMessage.getSpeaker({ actor: this });
-    const templateData = await this.getData();
-    const content = await foundry.applications.handlebars.renderTemplate(
-      `${OSE.systemPath()}/templates/chat/inventory-list.html`,
-      templateData
-    );
-    ChatMessage.create({
-      content,
-      speaker,
-    });
-    // Update the actor
-    await this.object.update(formData);
-
-    // Re-draw the updated sheet
-    this.object.sheet.render(true);
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -143,8 +67,50 @@ export default class OseCharacterGpCost extends FormApplication {
   /** @override */
   activateListeners(html) {
     super.activateListeners(html);
-    html.find("a.auto-deduct").click(() => {
-      this.submit();
+    html.find("a.auto-deduct").click(async (ev) => {
+      ev.preventDefault();
+
+      // --- Deduct GP ---
+      const totalCost = await this.#getTotalCost(await this._prepareContext());
+      const gp = this.actor.items.find((item) => {
+        const itemData = item.system;
+        return (
+          (item.name === game.i18n.localize("OSE.items.gp.short") ||
+            item.name === "GP") && // legacy behavior used GP, even for other languages
+          itemData.treasure
+        );
+      });
+
+      if (!gp) {
+        ui.notifications.error(game.i18n.localize("OSE.error.noGP"));
+        return;
+      }
+
+      const newGP = gp.system.quantity.value - totalCost;
+      if (newGP < 0) {
+        ui.notifications.error(game.i18n.localize("OSE.error.notEnoughGP"));
+        return;
+      }
+
+      await this.actor.updateEmbeddedDocuments("Item", [
+        { _id: gp.id, "system.quantity.value": newGP },
+      ]);
+
+      // --- Create Chat Message ---
+      const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+      const templateData = await this._prepareContext();
+      const content = await foundry.applications.handlebars.renderTemplate(
+        `${OSE.systemPath()}/templates/chat/inventory-list.html`,
+        templateData
+      );
+
+      ChatMessage.create({
+        content,
+        speaker,
+      });
+
+      // Close the dialog after the action is complete.
+      this.close();
     });
   }
 }

@@ -87,7 +87,7 @@ async function drawTreasure(table, data) {
   if (table.getFlag(game.system.id, "treasure")) {
     for (const r of table.results) {
       if (await percent(r.weight)) {
-        const text = await r.getHTML();
+        const text = r.getChatText();
         data.treasure[r.id] = {
           img: r.img,
           text: await foundry.applications.ux.TextEditor.implementation.enrichHTML(text, { async: true }),
@@ -106,7 +106,11 @@ async function drawTreasure(table, data) {
   } else {
     const { results } = await table.roll();
     for (const s of results) {
-      data.treasure[s.id] = { img: s.img, text: await s.getHTML() };
+      const text = s.getChatText();
+      data.treasure[s.id] = {
+        img: s.img,
+        text: await foundry.applications.ux.TextEditor.implementation.enrichHTML(text, { async: true }),
+      };
     };
   }
   return data;
@@ -149,13 +153,11 @@ export async function rollTreasure(table, options = {}) {
     // sound: "systems/ose/assets/coins.mp3"
   };
 
-  const rollMode = game.settings.get("core", "rollMode");
-  if (["gmroll", "blindroll"].includes(rollMode))
-    chatData.whisper = ChatMessage.getWhisperRecipients("GM");
-  if (rollMode === "selfroll") chatData.whisper = [game.user._id];
-  if (rollMode === "blindroll") chatData.blind = true;
+  const chatOptions = {
+    rollMode: game.settings.get("core", "rollMode"),
+  };
 
-  ChatMessage.create(chatData);
+  ChatMessage.create(chatData, chatOptions);
 }
 
 export const functionsForTesting = {

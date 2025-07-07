@@ -1,6 +1,7 @@
 /**
  * @file Extend the basic ActorSheet with some very simple modifications
  */
+import logger from "../logger.js";
 import OSE from "../config";
 import OseCharacterCreator from "../dialog/character-creation";
 import OseCharacterGpCost from "../dialog/character-gp-cost";
@@ -31,74 +32,72 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     });
   }
 
-  /**
-   * Organize and classify Owned Items for Character sheets
-   *
-   * @param data
-   * @private
-   */
-  _prepareItems(data) {
-    // Assign and return
-    data.owned = {
-      items: this.actor.system.items,
-      armors: this.actor.system.armor,
-      weapons: this.actor.system.weapons,
-      treasures: this.actor.system.treasures,
-      containers: this.actor.system.containers,
-    };
-    data.treasure = this.actor.system.carriedTreasure;
-    data.containers = this.actor.system.containers;
-    data.abilities = this.actor.system.abilities;
-    data.spells = this.actor.system.spells.spellList;
-    data.slots = this.actor.system.spellSlots;
-
-    // These values are getters that aren't getting
-    // cloned when `this.actor.system` is cloned
-    data.system.usesAscendingAC = this.actor.system.usesAscendingAC;
-    data.system.meleeMod = this.actor.system.meleeMod;
-    data.system.rangedMod = this.actor.system.rangedMod;
-    data.system.init = this.actor.system.init;
-
-    // Sort by sort order (see ActorSheet)
-    [
-      ...Object.values(data.owned),
-      ...Object.values(data?.spells?.spellList || {}),
-      data.abilities,
-    ].forEach((o) => o.sort((a, b) => (a.sort || 0) - (b.sort || 0)));
-  }
-
-  generateScores() {
-    new OseCharacterCreator(this.actor, {
-      top: this.position.top + 40,
-      left: this.position.left + (this.position.width - 400) / 2,
-    }).render(true);
+  generateScores(ev) {
+    logger.info(`Generating scores for ${this.actor.name}`);
+    this.actor.generateScores();
   }
 
   /**
-   * Prepare data for rendering the Actor sheet
    * The prepared data object contains both the actor data as well as additional sheet options
    */
-  async getData() {
-    const data = await super.getData();
+  async _prepareContext(options) {
+    logger.debug(`Preparing character context for ${this.actor.name}`);
+    const context = await super._prepareContext(options);
 
-    // Prepare owned items
-    this._prepareItems(data);
+    // Add class list for dropdown.
+    // You can customize this list to fit your campaign.
+    context.config.classes = {
+      "assassin": "Assassin",
+      "barbarian": "Barbarian",
+      "bard": "Bard",
+      "beast-master": "Beast Master",
+      "cleric": "Cleric",
+      "druid": "Druid",
+      "dwarf": "Dwarf",
+      "elf": "Elf",
+      "fighter": "Fighter",
+      "gnome": "Gnome",
+      "half-elf": "Half-Elf",
+      "half-orc": "Half-Orc",
+      "hobbit": "Hobbit",
+      "illusionist": "Illusionist",
+      "knight": "Knight",
+      "mage": "Mage",
+      "magic-user": "Magic-User",
+      "paladin": "Paladin",
+      "ranger": "Ranger",
+      "thief": "Thief",
+      "warden": "Warden"
+    };
 
-    data.enrichedBiography =
+    context.config.alignments = {
+      "lawful": "OSE.alignment.lawful",
+      "neutral": "OSE.alignment.neutral",
+      "chaotic": "OSE.alignment.chaotic"
+    };
+
+    // Add level list for dropdown.
+    context.config.levels = Array.from({length: 15}, (_, i) => i);
+
+    // Add ability score list for dropdown.
+    context.config.scores = Array.from({length: 16}, (_, i) => i + 3);
+
+    context.enrichedBiography =
       await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        this.object.system.details.biography,
+        this.object.system.details.biography || "",
         { async: true }
       );
-    data.enrichedNotes =
+    context.enrichedNotes =
       await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        this.object.system.details.notes,
+        this.object.system.details.notes || "",
         { async: true }
       );
 
-    return data;
+    return context;
   }
 
   async _chooseLang() {
+    logger.debug("Choosing language");
     const choices = CONFIG.OSE.languages;
 
     const templateData = { choices };
@@ -134,26 +133,31 @@ export default class OseActorSheetCharacter extends OseActorSheet {
 
   _pushLang(table) {
     const data = this.actor.system;
-    let update = data[table]; // V10 compatibility
+    logger.info(`Adding language to ${this.actor.name}`);
     this._chooseLang().then((dialogInput) => {
+      if (!dialogInput?.choice) return; // User cancelled the dialog
+
       const name = CONFIG.OSE.languages[dialogInput.choice];
-      if (update.value) {
-        update.value.push(name);
-      } else {
-        update = { value: [name] };
-      }
+      // Ensure we have a valid array to work with, even if it's the first time.
+      const currentLangs = data[table]?.value || [];
+      const updatedLangs = [...currentLangs, name];
 
       const newData = {};
-      newData[table] = update;
+      newData[table] = { value: updatedLangs };
       return this.actor.update({ system: newData });
     });
   }
 
   _popLang(table, lang) {
     const data = this.actor.system;
-    const update = data[table].value.filter((el) => el != lang);
+    logger.info(`Removing language ${lang} from ${this.actor.name}`);
+    // Guard against cases where there are no languages to remove.
+    const currentLangs = data[table]?.value || [];
+    if (currentLangs.length === 0) return;
+
+    const updatedLangs = currentLangs.filter((el) => el != lang);
     const newData = {};
-    newData[table] = { value: update };
+    newData[table] = { value: updatedLangs };
     return this.actor.update({ system: newData });
   }
 
@@ -161,17 +165,23 @@ export default class OseActorSheetCharacter extends OseActorSheet {
 
   _onShowModifiers(event) {
     event.preventDefault();
+    logger.debug(`Showing modifiers for ${this.actor.name}`);
     new OseCharacterModifiers(this.actor, {
-      top: this.position.top + 40,
-      left: this.position.left + (this.position.width - 400) / 2,
+      position: {
+        top: this.position.top + 40,
+        left: this.position.left + (this.position.width - 400) / 2,
+      },
     }).render(true);
   }
 
   async _onShowGpCost(event, preparedData) {
     event.preventDefault();
+    logger.debug(`Showing GP cost for ${this.actor.name}`);
     new OseCharacterGpCost(this.actor, preparedData, {
-      top: this.position.top + 40,
-      left: this.position.left + (this.position.width - 400) / 2,
+      position: {
+        top: this.position.top + 40,
+        left: this.position.left + (this.position.width - 400) / 2,
+      },
     }).render(true);
   }
 
@@ -211,12 +221,19 @@ export default class OseActorSheetCharacter extends OseActorSheet {
       actorObject.rollExploration(expl, { event: ev });
     });
 
+    html.find(".thiefskills .attribute-name a").click((ev) => {
+      const actorObject = this.actor;
+      const element = ev.currentTarget;
+      const { skill } = element.closest(".attribute").dataset;
+      actorObject.rollThiefSkill(skill, { event: ev });
+    });
+
     html.find("a[data-action='modifiers']").click((ev) => {
       this._onShowModifiers(ev);
     });
 
     html.find("a[data-action='gp-cost']").click((ev) => {
-      this._onShowGpCost(ev, this.getData());
+      this._onShowGpCost(ev, this.context);
     });
 
     // Everything below here is only needed if the sheet is editable
@@ -252,5 +269,6 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     html.find("a[data-action='generate-scores']").click((ev) => {
       this.generateScores(ev);
     });
+
   }
 }

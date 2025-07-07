@@ -1,5 +1,7 @@
 {
   "OSE.Edit": "Edit",
+  "OSE.Sheet.Character": "Character Sheet",
+  "OSE.Sheet.Item": "Item Sheet",
   "OSE.Delete": "Delete",
   "OSE.Show": "Show",
   "OSE.Add": "Add",
@@ -11,6 +13,13 @@
   "OSE.Reroll": "Reroll",
   "OSE.Success": "Success",
   "OSE.Failure": "Failure",
+
+  "OSE.SelectClass": "Select",
+  "OSE.SelectAlignment": "Select",
+
+  "OSE.alignment.lawful": "Lawful",
+  "OSE.alignment.neutral": "Neutral",
+  "OSE.alignment.chaotic": "Chaotic",
 
   "OSE.dialog.tweaks": "Tweaks",
   "OSE.dialog.partysheet": "Party Overview",
@@ -24,10 +33,10 @@
   "OSE.dialog.xp.label": "XP",
   "OSE.dialog.generator": "Character generator",
   "OSE.dialog.generateSaves": "Generate Saves",
-  "OSE.dialog.generateScores": "Generate Scores",
+  "OSE.dialog.generateScores": "Generate Scores (4d6 drop lowest)",
   "OSE.dialog.generateScore": "Rolling {score} ({count})",
   "OSE.dialog.shoppingCart": "Shopping Cart",
-  "OSE.dialog.purchaseFor": "Purchase for {totalCost}GP",
+  "OSE.dialog.purchaseFor": "Purchase for {totalCost}SP",
   "OSE.dialog.deleteContainer": "Delete container?",
   "OSE.dialog.confirmDeleteContainer": "Are you sure you want to delete the container?",
 
@@ -50,6 +59,8 @@
   "OSE.roll.details.attribute": "Roll 1d20 <= {score} for success",
   "OSE.roll.exploration": "{exploration} test",
   "OSE.roll.details.exploration": "Roll 1d6 <= {expl} for success",
+  "OSE.roll.thiefskill": "{skill} Skill Check",
+  "OSE.roll.details.thiefskill": "Roll 1d6 <= {skill} for success",
   "OSE.roll.reaction": "Reaction roll",
   "OSE.roll.initiative": "Group {group} rolls for Initiative!",
   "OSE.roll.individualInit": "{name} rolls for Initiative!",
@@ -60,7 +71,6 @@
 
   "OSE.details.name": "Name",
   "OSE.details.class": "Class",
-  "OSE.details.title": "Title",
   "OSE.details.alignment": "Alignment",
   "OSE.details.level": "Level",
   "OSE.details.experience.base": "Experience",
@@ -172,6 +182,7 @@
   "OSE.category.notes": "Notes",
   "OSE.category.languages": "Languages",
   "OSE.category.description": "Description",
+  "OSE.category.thiefskills": "Thief Skills",
   "OSE.category.equipment": "Equipment",
 
   "OSE.Setting.Initiative": "Initiative",
@@ -242,8 +253,8 @@
   "OSE.items.enterTag": "Tags",
   "OSE.items.pattern": "Attack pattern marker",
   "OSE.items.uses": "Uses",
-  "OSE.items.gp.short": "GP",
-  "OSE.items.gp.long": "Gold Pieces",
+  "OSE.items.gp.short": "SP",
+  "OSE.items.gp.long": "Silver Pieces",
 
   "OSE.items.Range": "Range",
   "OSE.items.Melee": "Melee",
@@ -290,6 +301,14 @@
   "OSE.exploration.ft.short": "Find Trap",
   "OSE.exploration.ft.abrev": "FT",
 
+  "OSE.thiefskill.climbSheerSurfaces": "Climb Sheer Surfaces",
+  "OSE.thiefskill.findRemoveTraps": "Find/Remove Traps",
+  "OSE.thiefskill.hearNoise": "Hear Noise",
+  "OSE.thiefskill.hideInShadows": "Hide in Shadows",
+  "OSE.thiefskill.moveSilently": "Move Silently",
+  "OSE.thiefskill.openLocks": "Open Locks",
+  "OSE.thiefskill.pickPockets": "Pick Pockets",
+
   "OSE.messages.GetExperience": "{name} gained {value} experience points!",
   "OSE.messages.AttackSuccess": "<b>Hits AC {result}!</b> ({bonus})",
   "OSE.messages.AttackAscendingSuccess": "<b>Hits AC {result}!</b>",
@@ -326,14 +345,13 @@
   "OSE.warn.macrosOnlyForOwnedItems": "Only Items owned by Actor may be used to create macros.",
   "OSE.warn.macrosNoTokenOwnedInScene": "No controlled token in scene",
   "OSE.warn.macrosNotAnItem": "Unable to create macro, not an item.",
-
   "OSE.error.macrosOnlyForOwnedItems": "You can only create macro buttons for owned Items",
   "OSE.error.noRollTableWithUuId": "RollTable with uuid, {uuid} did not or no longer exists in this world.",
   "OSE.error.noItemWithName": "Your controlled Actor {actorName} does not have an item named {itemName}.",
-  "OSE.error.notEnoughGP": "This Actor doesn't have enough GP to pay for its inventory.",
+  "OSE.error.notEnoughGP": "This Actor doesn't have enough SP to pay for its inventory.",
   "OSE.error.itemNoLongerExistsOnActor": "The requested Item {itemId} no longer exists on Actor {actorName}.",
   "OSE.error.noTokenControlled": "You must have one or more controlled Tokens in order to use this option.",
-  "OSE.error.noGP": "You need a GP item to use this feature.",
+  "OSE.error.noGP": "You need a SP item to use this feature.",
   "OSE.error.unexpectedSettings": "unexpected OSE setting {configName}: {configValue}",
   "OSE.error.cantDealDamageTo": "Can't deal damage to {nameOrId}"
 }

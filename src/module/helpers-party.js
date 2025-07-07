@@ -41,5 +41,5 @@ export const update = (actor) => {
     return;
   }
 
-  OsePartySheet.partySheet.render();
+  OsePartySheet.instance.render();
 };

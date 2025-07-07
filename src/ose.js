@@ -27,6 +27,7 @@ import * as treasure from "./module/helpers-treasure";
 import OsePartySheet from "./module/party/party-sheet";
 import templates from "./module/preloadTemplates";
 import * as renderList from "./module/renderList";
+import { savingThrows } from "./module/saves";
 import registerSettings from "./module/settings";
 
 import { OSECombat } from "./module/combat/combat";
@@ -34,6 +35,7 @@ import OSECombatTracker from "./module/combat/combat-tracker";
 import { OSECombatant } from "./module/combat/combatant";
 import TokenRulerOSE from "./module/actor/token-ruler";
 
+import logger from "./module/logger.js";
 import "./e2e";
 import polyfill from "./module/polyfill";
 
@@ -50,6 +52,7 @@ Hooks.once("init", async () => {
   Hooks.call("ose-setup-encumbrance");
 
   CONFIG.OSE = OSE;
+  CONFIG.OSE.savingThrows = savingThrows;
 
   if (game.system.id === "ose-dev") {
     CONFIG.debug = {
@@ -77,6 +80,7 @@ Hooks.once("init", async () => {
   game.ose = {
     rollItemMacro: macros.rollItemMacro,
     rollTableMacro: macros.rollTableMacro,
+    logger,
   };
 
   // Init Party Sheet handler
@@ -105,10 +109,6 @@ Hooks.once("init", async () => {
   };
 
   // Register sheet application classes
-  foundry.documents.collections.Actors.unregisterSheet(
-    "core",
-    foundry.appv1.sheets.ActorSheet
-  );
   foundry.documents.collections.Actors.registerSheet(
     game.system.id,
     OseActorSheetCharacter,
@@ -128,10 +128,6 @@ Hooks.once("init", async () => {
     }
   );
 
-  foundry.documents.collections.Items.unregisterSheet(
-    "core",
-    foundry.appv1.sheets.ItemSheet
-  );
   foundry.documents.collections.Items.registerSheet(
     game.system.id,
     OseItemSheet,

@@ -93,13 +93,17 @@ export default class OseActor extends Actor {
       [xpKey]: modified + actorData.details.xp.value,
     }).then(() => {
       const speaker = ChatMessage.getSpeaker({ actor: this });
-      ChatMessage.create({
+      const chatData = {
         content: game.i18n.format("OSE.messages.GetExperience", {
           name: this.name,
           value: modified,
         }),
         speaker,
-      });
+      };
+      const chatOptions = {
+        rollMode: game.settings.get("core", "rollMode"),
+      };
+      ChatMessage.create(chatData, chatOptions);
     });
   }
 
@@ -131,6 +135,37 @@ export default class OseActor extends Actor {
       });
     }
     this.updateSource({ prototypeToken });
+  }
+
+  async generateScores(method = "4d6kh3") {
+    if (this.type !== "character") return;
+
+    const scores = {};
+    const scoreNames = ["str", "int", "wis", "dex", "con", "cha"];
+    const rollPromises = scoreNames.map(() => new Roll(method).roll({ async: true }));
+    const rolls = await Promise.all(rollPromises);
+
+    for (let i = 0; i < scoreNames.length; i++) {
+      const scoreName = scoreNames[i];
+      const roll = rolls[i];
+      scores[scoreName] = { value: roll.total };
+    }
+
+    await this.update({ "system.scores": scores });
+
+    // Send a chat message with the results.
+    const speaker = ChatMessage.getSpeaker({ actor: this });
+    let content = `<strong>Ability Scores (${method})</strong><br>`;
+    for (const scoreName of scoreNames) {
+      content += `<strong>${game.i18n.localize(`OSE.scores.${scoreName}.long`)}:</strong> ${scores[scoreName].value}<br>`;
+    }
+
+    const chatData = { speaker, content };
+    const chatOptions = {
+      rollMode: game.settings.get("core", "rollMode"),
+    };
+
+    ChatMessage.create(chatData, chatOptions);
   }
 
   generateSave(hd) {
@@ -443,6 +478,38 @@ export default class OseActor extends Actor {
       speaker: ChatMessage.getSpeaker({ actor: this }),
       flavor: game.i18n.format("OSE.roll.exploration", { exploration: label }),
       title: game.i18n.format("OSE.roll.exploration", { exploration: label }),
+    });
+  }
+
+  rollThiefSkill(skill, options = {}) {
+    const actorType = this.type;
+    if (actorType !== "character") return;
+    const actorData = this.system;
+
+    const label =
+      game.i18n.localize(`OSE.thiefskill.${skill}`) || skill.capitalize();
+    const rollParts = ["1d6"];
+
+    const data = {
+      actor: this,
+      roll: {
+        type: "below",
+        target: actorData.thiefskills[skill].value,
+      },
+      details: game.i18n.format("OSE.roll.details.thiefskill", {
+        skill: label,
+      }),
+    };
+
+    // Roll and return
+    return OseDice.Roll({
+      event: options.event,
+      parts: rollParts,
+      data,
+      skipDialog: options.fastForward || skipRollDialogCheck(options.event),
+      speaker: ChatMessage.getSpeaker({ actor: this }),
+      flavor: game.i18n.format("OSE.roll.thiefskill", { skill: label }),
+      title: game.i18n.format("OSE.roll.thiefskill", { skill: label }),
     });
   }
 

@@ -171,7 +171,6 @@ export default class OseItem extends Item {
       roll: {
         type,
         target: itemData.rollTarget,
-        blindroll: itemData.blindroll,
       },
     };
 
@@ -179,8 +178,7 @@ export default class OseItem extends Item {
       rollData.description = itemData.description
     };
 
-    // Roll and return
-    return OseDice.Roll({
+    const rollOptions = {
       event: options.event,
       parts: rollParts,
       data: rollData,
@@ -188,7 +186,13 @@ export default class OseItem extends Item {
       speaker: ChatMessage.getSpeaker({ actor: this }),
       flavor: game.i18n.format("OSE.roll.formula", { label }),
       title: game.i18n.format("OSE.roll.formula", { label }),
-    });
+      rollMode: itemData.blindroll
+        ? CONST.DICE_ROLL_MODES.BLIND
+        : game.settings.get("core", "rollMode"),
+    };
+
+    // Roll and return
+    return OseDice.Roll(rollOptions);
   }
 
   async spendSpell() {
@@ -451,15 +455,13 @@ export default class OseItem extends Item {
       },
     };
 
-    // Toggle default roll mode
-    const rollMode = game.settings.get("core", "rollMode");
-    if (["gmroll", "blindroll"].includes(rollMode))
-      chatData.whisper = ChatMessage.getWhisperRecipients("GM");
-    if (rollMode === "selfroll") chatData.whisper = [game.user.id];
-    if (rollMode === "blindroll") chatData.blind = true;
+    // Prepare chat options
+    const chatOptions = {
+      rollMode: game.settings.get("core", "rollMode"),
+    };
 
     // Create the chat message
-    return ChatMessage.create(chatData);
+    return ChatMessage.create(chatData, chatOptions);
   }
 
   /**

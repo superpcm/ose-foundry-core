@@ -1,15 +1,9 @@
 /**
  * @file An application for managing the current party.
  */
-import OSE from "../config";
-import OseParty from "./party";
-import OsePartyXP from "./party-xp";
+import OSE from "../config"; import OseParty from "./party"; import OsePartyXP from "./party-xp";
 
-const Party = {
-  partySheet: void 0,
-};
-
-export default class OsePartySheet extends FormApplication {
+export default class OsePartySheet extends foundry.applications.api.ApplicationV2 {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["ose", "dialog", "party-sheet"],
@@ -20,20 +14,25 @@ export default class OsePartySheet extends FormApplication {
       dragDrop: [
         { dragSelector: ".actor-list .actor", dropSelector: ".party-members" },
       ],
-      closeOnSubmit: false,
     });
   }
 
+  /**
+   * A singleton instance of the Party Sheet.
+   * @type {OsePartySheet}
+   */
+  static #instance;
+
   static init() {
-    Party.partySheet = new OsePartySheet();
+    this.#instance = new OsePartySheet();
   }
 
   static showPartySheet(options = {}) {
-    OsePartySheet.partySheet.render(true, { focus: true, ...options });
+    this.#instance.render(true, { focus: true, ...options });
   }
 
-  static get partySheet() {
-    return Party.partySheet;
+  static get instance() {
+    return this.#instance;
   }
 
   /* -------------------------------------------- */
@@ -54,18 +53,17 @@ export default class OsePartySheet extends FormApplication {
    *
    * @returns {object}
    */
-  getData() {
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
     const settings = {
       ascending: game.settings.get(game.system.id, "ascendingAC"),
     };
 
-    return {
-      partyActors: OseParty.currentParty,
-      // data: this.object,
-      config: CONFIG.OSE,
-      user: game.user,
-      settings,
-    };
+    context.partyActors = OseParty.currentParty;
+    context.config = CONFIG.OSE;
+    context.user = game.user;
+    context.settings = settings;
+    return context;
   }
 
   async _addActorToParty(actor) {
@@ -117,8 +115,12 @@ export default class OsePartySheet extends FormApplication {
   }
 
   _recursiveAddFolder(folder) {
-    folder.contents.forEach((actor) => this._addActorToParty(actor));
-    folder.children.forEach((folder) => this._recursiveAddFolder(folder.folder));
+    for (const actor of folder.contents) {
+      this._addActorToParty(actor);
+    }
+    for (const subfolder of folder.children) {
+      this._recursiveAddFolder(subfolder);
+    }
   }
 
   async _onDropFolder(event, data) {
@@ -144,8 +146,8 @@ export default class OsePartySheet extends FormApplication {
 
   /* -------------------------------------------- */
 
-  async _dealXP(ev) {
-    new OsePartyXP(this.object, {}).render(true);
+  _dealXP() {
+    new OsePartyXP().render(true);
   }
 
   /** @override */
