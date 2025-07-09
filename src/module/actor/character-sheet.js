@@ -11,30 +11,15 @@ import OseActorSheet from "./actor-sheet";
 export default class OseActorSheetCharacter extends OseActorSheet {
   /**
    * Extend and override the default options used by the 5e Actor Sheet
-   *
-   * @returns {object} - The default options for this sheet.
+   * @returns {object} The default options for this sheet.
    */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["ose", "sheet", "actor", "character"],
-      template: `${OSE.systemPath()}/templates/actors/character-sheet.html`,
       width: 450,
       height: 530,
       resizable: true,
-      tabs: [
-        {
-          navSelector: ".sheet-tabs",
-          contentSelector: ".sheet-body",
-          initial: "attributes",
-        },
-      ],
-      scrollY: [".inventory"],
     });
-  }
-
-  generateScores(ev) {
-    logger.info(`Generating scores for ${this.actor.name}`);
-    this.actor.generateScores();
   }
 
   /**
@@ -45,67 +30,49 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     const context = await super._prepareContext(options);
 
     // Add class list for dropdown.
-    // You can customize this list to fit your campaign.
     context.config.classes = {
-      "assassin": "Assassin",
-      "barbarian": "Barbarian",
-      "bard": "Bard",
-      "beast-master": "Beast Master",
-      "cleric": "Cleric",
-      "druid": "Druid",
-      "dwarf": "Dwarf",
-      "elf": "Elf",
-      "fighter": "Fighter",
-      "gnome": "Gnome",
-      "half-elf": "Half-Elf",
-      "half-orc": "Half-Orc",
-      "hobbit": "Hobbit",
-      "illusionist": "Illusionist",
-      "knight": "Knight",
-      "mage": "Mage",
-      "magic-user": "Magic-User",
-      "paladin": "Paladin",
-      "ranger": "Ranger",
-      "thief": "Thief",
-      "warden": "Warden"
+      "assassin": "Assassin", "barbarian": "Barbarian", "bard": "Bard", "beast-master": "Beast Master",
+      "cleric": "Cleric", "druid": "Druid", "dwarf": "Dwarf", "elf": "Elf", "fighter": "Fighter",
+      "gnome": "Gnome", "half-elf": "Half-Elf", "half-orc": "Half-Orc", "hobbit": "Hobbit",
+      "illusionist": "Illusionist", "knight": "Knight", "mage": "Mage", "magic-user": "Magic-User",
+      "paladin": "Paladin", "ranger": "Ranger", "thief": "Thief", "warden": "Warden"
     };
 
     context.config.alignments = {
-      "lawful": "OSE.alignment.lawful",
-      "neutral": "OSE.alignment.neutral",
-      "chaotic": "OSE.alignment.chaotic"
+      "lawful": "OSE.alignment.lawful", "neutral": "OSE.alignment.neutral", "chaotic": "OSE.alignment.chaotic"
     };
 
-    // Add level list for dropdown.
     context.config.levels = Array.from({length: 15}, (_, i) => i);
-
-    // Add ability score list for dropdown.
     context.config.scores = Array.from({length: 16}, (_, i) => i + 3);
 
+    // CORRECTED: Use context.system instead of this.object.system
     context.enrichedBiography =
       await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        this.object.system.details.biography || "",
-        { async: true }
+        context.system.details.biography || "",
+        { async: true, relativeTo: this.actor }
       );
     context.enrichedNotes =
       await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        this.object.system.details.notes || "",
-        { async: true }
+        context.system.details.notes || "",
+        { async: true, relativeTo: this.actor }
       );
 
     return context;
   }
 
+  generateScores(ev) {
+    logger.info(`Generating scores for ${this.actor.name}`);
+    this.actor.generateScores();
+  }
+
   async _chooseLang() {
     logger.debug("Choosing language");
     const choices = CONFIG.OSE.languages;
-
     const templateData = { choices };
     const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/dialogs/lang-create.html`,
       templateData
     );
-    // Create Dialog window
     return new Promise((resolve) => {
       new foundry.applications.api.DialogV2({
         window: { title: "" },
@@ -135,13 +102,10 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     const data = this.actor.system;
     logger.info(`Adding language to ${this.actor.name}`);
     this._chooseLang().then((dialogInput) => {
-      if (!dialogInput?.choice) return; // User cancelled the dialog
-
+      if (!dialogInput?.choice) return;
       const name = CONFIG.OSE.languages[dialogInput.choice];
-      // Ensure we have a valid array to work with, even if it's the first time.
       const currentLangs = data[table]?.value || [];
       const updatedLangs = [...currentLangs, name];
-
       const newData = {};
       newData[table] = { value: updatedLangs };
       return this.actor.update({ system: newData });
@@ -151,17 +115,13 @@ export default class OseActorSheetCharacter extends OseActorSheet {
   _popLang(table, lang) {
     const data = this.actor.system;
     logger.info(`Removing language ${lang} from ${this.actor.name}`);
-    // Guard against cases where there are no languages to remove.
     const currentLangs = data[table]?.value || [];
     if (currentLangs.length === 0) return;
-
     const updatedLangs = currentLangs.filter((el) => el != lang);
     const newData = {};
     newData[table] = { value: updatedLangs };
     return this.actor.update({ system: newData });
   }
-
-  /* -------------------------------------------- */
 
   _onShowModifiers(event) {
     event.preventDefault();
@@ -194,81 +154,50 @@ export default class OseActorSheetCharacter extends OseActorSheet {
     document.querySelector(".game").append(dlg);
   }
 
-  /**
-   * Activate event listeners using the prepared sheet HTML
-   *
-   * @param html - {HTML}   The prepared HTML object ready to be rendered into the DOM
-   */
   activateListeners(html) {
     super.activateListeners(html);
-
     html.find(".ability-score .attribute-name a").click((ev) => {
       const actorObject = this.actor;
       const element = ev.currentTarget;
-      const { score } = element.parentElement.parentElement.dataset;
-      const { stat } = element.parentElement.parentElement.dataset;
+      const { score, stat } = element.parentElement.parentElement.dataset;
       if (score) {
         actorObject.rollCheck(score, { event: ev });
       } else if (stat === "lr") {
         actorObject.rollLoyalty(score, { event: ev });
       }
     });
-
     html.find(".exploration .attribute-name a").click((ev) => {
       const actorObject = this.actor;
       const element = ev.currentTarget;
       const expl = element.parentElement.parentElement.dataset.exploration;
       actorObject.rollExploration(expl, { event: ev });
     });
-
     html.find(".thiefskills .attribute-name a").click((ev) => {
       const actorObject = this.actor;
       const element = ev.currentTarget;
       const { skill } = element.closest(".attribute").dataset;
       actorObject.rollThiefSkill(skill, { event: ev });
     });
-
-    html.find("a[data-action='modifiers']").click((ev) => {
-      this._onShowModifiers(ev);
-    });
-
-    html.find("a[data-action='gp-cost']").click((ev) => {
-      this._onShowGpCost(ev, this.context);
-    });
-
-    // Everything below here is only needed if the sheet is editable
+    html.find("a[data-action='modifiers']").click((ev) => { this._onShowModifiers(ev); });
+    html.find("a[data-action='gp-cost']").click((ev) => { this._onShowGpCost(ev, this.context); });
     if (!this.options.editable) return;
-
-    // Language Management
     html.find(".item-push").click((ev) => {
       ev.preventDefault();
       const header = ev.currentTarget;
       const table = header.dataset.array;
       this._pushLang(table);
     });
-
     html.find(".item-pop").click((ev) => {
       ev.preventDefault();
       const header = ev.currentTarget;
       const table = header.dataset.array;
       this._popLang(table, $(ev.currentTarget).closest(".item").data("lang"));
     });
-
-    // Toggle Equipment
     html.find(".item-toggle").click(async (ev) => {
       const li = $(ev.currentTarget).parents(".item");
       const item = this.actor.items.get(li.data("itemId"));
-      await item.update({
-        system: {
-          equipped: !item.system.equipped,
-        },
-      });
-
+      await item.update({ system: { equipped: !item.system.equipped } });
     });
-
-    html.find("a[data-action='generate-scores']").click((ev) => {
-      this.generateScores(ev);
-    });
-
+    html.find("a[data-action='generate-scores']").click((ev) => { this.generateScores(ev); });
   }
 }

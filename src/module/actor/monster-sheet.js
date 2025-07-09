@@ -5,79 +5,43 @@ import OSE from "../config";
 import logger from "../logger.js";
 import OseActorSheet from "./actor-sheet";
 
-
-/**
- * Extend the basic ActorSheet with some very simple modifications
- */
 export default class OseActorSheetMonster extends OseActorSheet {
-  /**
-   * Extend and override the default options used by the Actor Sheet
-   *
-   * @returns {object} - The sheet's default options
-   */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["ose", "sheet", "monster", "actor"],
-      template: `${OSE.systemPath()}/templates/actors/monster-sheet.html`,
       width: 450,
-      height: 560,
-      resizable: true,
-      tabs: [
-        {
-          navSelector: ".tabs",
-          contentSelector: ".sheet-body",
-          initial: "attributes",
-        },
-      ],
     });
   }
 
-  /**
-   * Prepare data for rendering the Actor sheet
-   * The prepared data object contains both the actor data as well as additional sheet options
-   */
   async _prepareContext(options) {
-    logger.debug(`Preparing monster context for ${this.actor.name}`);
     const context = await super._prepareContext(options);
-    const monsterData = context?.system;
+    logger.debug(`Preparing monster context for ${this.actor.name}`);
+    const monsterData = context.system;
 
-    // Settings
     context.config.morale = game.settings.get(game.system.id, "morale");
-    if (monsterData.details.treasure) {
-      monsterData.details.treasure.link =
-        await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-          monsterData.details.treasure.table,
-          { async: true }
-        );
-    }
-    context.isNew = this.actor.isNew();
 
-    context.enrichedBiography =
-      await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-        this.object.system.details.biography || "",
-        { async: true }
+    if (monsterData.details.treasure?.table) {
+      context.treasureLink = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        monsterData.details.treasure.table, { async: true, relativeTo: this.actor }
       );
+    }
+    context.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+      monsterData.details.biography || "", { async: true, relativeTo: this.actor }
+    );
+
     return context;
   }
 
-  /**
-   * Monster creation helpers
-   */
   async generateSave() {
-    logger.info(`Generating saves for monster ${this.actor.name}`);
     const choices = CONFIG.OSE.monster_saves;
-
     const templateData = { choices };
     const dlg = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/dialogs/monster-saves.html`,
       templateData
     );
-    // Create Dialog window
-    return new foundry.applications.api.DialogV2({
+    new foundry.applications.api.DialogV2({
       window: { title: game.i18n.localize("OSE.dialog.generateSaves") },
-      position: {
-        width: 250,
-      },
+      position: { width: 250 },
       content: dlg,
       buttons: [
         {
@@ -86,146 +50,58 @@ export default class OseActorSheetMonster extends OseActorSheet {
           icon: "fas fa-check",
           default: true,
           callback: (event, button) => {
-            const { hd } = new foundry.applications.ux.FormDataExtended(
-              button.form
-            ).object;
+            const { hd } = new foundry.applications.ux.FormDataExtended(button.form).object;
             this.actor.generateSave(hd.replace(/[^\d+.-]/g, ""));
           },
         },
-        {
-          action: "cancel",
-          icon: "fas fa-times",
-          label: game.i18n.localize("OSE.Cancel"),
-          callback: () => {},
-        },
+        { action: "cancel", icon: "fas fa-times", label: game.i18n.localize("OSE.Cancel") },
       ],
     }).render(true);
   }
-
-  async _onDrop(event) {
-    logger.debug(`Drop event on monster sheet for ${this.actor.name}`);
-    let data;
-    try {
-      data = JSON.parse(event.dataTransfer.getData("text/plain"));
-    } catch (error) {
-      // If data is not a JSON string, it's not for us.
-      // Let the super method handle it.
-      return super._onDrop(event);
-    }
-
-    // If it's not a RollTable, let the super method handle it.
-    if (data.type !== "RollTable") return super._onDrop(event);
-
-    // It's a RollTable, handle it here.
-    let link = "";
-    if (data.pack) {
-      const tableDatum = game.packs
-        .get(data.pack)
-        .index.find((el) => el._id === data.id);
-      link = `@UUID[${data.uuid}]{${tableDatum.name}}`;
-    } else {
-      link = `@UUID[${data.uuid}]`;
-    }
-    this.actor.update({ "system.details.treasure.table": link });
-  }
-
-  /* -------------------------------------------- */
-  async _resetAttacks(event) {
-    logger.info(`Resetting attacks for ${this.actor.name}`);
-    return Promise.all(
-      this.actor.items
-        .filter((i) => i.type === "weapon")
-        .map((weapon) =>
-          weapon.update({
-            "system.counter.value": parseInt(weapon.system.counter.max),
-          })
-        )
-    );
-  }
-
-  async _updateAttackCounter(event) {
-    event.preventDefault();
-    logger.debug(`Updating attack counter for ${this.actor.name}`);
-    const item = this._getItemFromActor(event);
-
-    if (event.target.dataset.field === "value") {
-      return item.update({
-        "system.counter.value": parseInt(event.target.value),
-      });
-    }
-    if (event.target.dataset.field === "max") {
-      return item.update({
-        "system.counter.max": parseInt(event.target.value),
-      });
-    }
-  }
-
-  _cycleAttackPatterns(event) {
-    const item = super._getItemFromActor(event);
-    logger.debug(`Cycling attack pattern for item ${item.name} on ${this.actor.name}`);
-    const currentColor = item.system.pattern;
-    // Attack patterns include all OSE colors and transparent
-    const colors = Object.keys(CONFIG.OSE.colors);
-    colors.push("transparent");
-    let index = colors.indexOf(currentColor);
-    if (index + 1 === colors.length) {
-      index = 0;
-    } else {
-      index++;
-    }
-    item.update({
-      "system.pattern": colors[index],
-    });
-  }
-
-  /**
-   * Activate event listeners using the prepared sheet HTML
-   *
-   * @param html - {HTML}   The prepared HTML object ready to be rendered into the DOM
-   */
+  
   activateListeners(html) {
     super.activateListeners(html);
 
-    html.find(".morale-check a").click((ev) => {
-      const actorObject = this.actor;
-      actorObject.rollMorale({ event: ev });
-    });
-
-    html.find(".reaction-check a").click((ev) => {
-      const actorObject = this.actor;
-      actorObject.rollReaction({ event: ev });
-    });
-
+    html.find(".morale-check a").click((ev) => this.actor.rollMorale({ event: ev }));
+    html.find(".reaction-check a").click((ev) => this.actor.rollReaction({ event: ev }));
     html.find(".appearing-check a").click((ev) => {
-      const actorObject = this.actor;
-      const check = $(ev.currentTarget).closest(".check-field").data("check");
-      actorObject.rollAppearing({ event: ev, check });
+      const check = ev.currentTarget.closest(".check-field").dataset.check;
+      this.actor.rollAppearing({ event: ev, check });
     });
 
-    html.find(".treasure-table a").contextmenu((ev) => {
-      this.actor.update({ "system.details.treasure.table": null });
-    });
-
-    // Everything below here is only needed if the sheet is editable
     if (!this.options.editable) return;
 
-    html.find(".item-reset[data-action='reset-attacks']").click((ev) => {
-      this._resetAttacks(ev);
+    html.find(".treasure-table a").contextmenu((ev) => {
+      this.actor.update({ "system.details.treasure.table": "" });
     });
 
-    html
-      .find(".counter input")
-      .click((ev) => ev.target.select())
-      .change(this._updateAttackCounter.bind(this));
-
-    html.find(".hp-roll").click((ev) => {
-      this.actor.rollHP({ event: ev });
+    html.find(".item-reset[data-action='reset-attacks']").click(async (ev) => {
+      const updates = this.actor.items
+        .filter((i) => i.type === "weapon" && i.system.counter)
+        .map((weapon) => ({ _id: weapon.id, "system.counter.value": weapon.system.counter.max }));
+      if (updates.length) await this.actor.updateEmbeddedDocuments("Item", updates);
     });
 
-    html.find(".item-pattern").click((ev) => this._cycleAttackPatterns(ev));
+    html.find(".counter input").click((ev) => ev.target.select()).change(async (ev) => {
+      const item = this._getItemFromActor(ev);
+      const field = ev.target.dataset.field;
+      if (item && ["value", "max"].includes(field)) {
+        await item.update({ [`system.counter.${field}`]: parseInt(ev.target.value) });
+      }
+    });
 
-    html
-      .find('button[data-action="generate-saves"]')
-      .click(() => this.generateSave());
+    html.find(".hp-roll").click((ev) => this.actor.rollHP({ event: ev }));
+    
+    html.find(".item-pattern").click((ev) => {
+      const item = this._getItemFromActor(ev);
+      if (!item) return;
+      const colors = Object.keys(CONFIG.OSE.colors);
+      colors.push("transparent");
+      const currentColor = item.system.pattern || "transparent";
+      const nextIndex = (colors.indexOf(currentColor) + 1) % colors.length;
+      item.update({ "system.pattern": colors[nextIndex] });
+    });
+
+    html.find('button[data-action="generate-saves"]').click(this.generateSave.bind(this));
   }
 }
