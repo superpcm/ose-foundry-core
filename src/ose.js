@@ -1,3 +1,4 @@
+
 /**
  * @file The entry point for the OSE system
  *       We should handle most of our setup here.
@@ -7,7 +8,6 @@ import OseDataModelCharacter from "./module/actor/data-model-character";
 import OseDataModelMonster from "./module/actor/data-model-monster";
 import OseActor from "./module/actor/entity";
 import OseActorSheetMonster from "./module/actor/monster-sheet";
-
 import OseDataModelAbility from "./module/item/data-model-ability";
 import OseDataModelArmor from "./module/item/data-model-armor";
 import OseDataModelContainer from "./module/item/data-model-container";
@@ -16,7 +16,6 @@ import OseDataModelSpell from "./module/item/data-model-spell";
 import OseDataModelWeapon from "./module/item/data-model-weapon";
 import OseItem from "./module/item/entity";
 import OseItemSheet from "./module/item/item-sheet";
-
 import { OSE } from "./module/config";
 import registerFVTTModuleAPIs from "./module/fvttModuleAPIs";
 import * as chat from "./module/helpers-chat";
@@ -29,12 +28,10 @@ import templates from "./module/preloadTemplates";
 import * as renderList from "./module/renderList";
 import { savingThrows } from "./module/saves";
 import registerSettings from "./module/settings";
-
 import { OSECombat } from "./module/combat/combat";
 import OSECombatTracker from "./module/combat/combat-tracker";
 import { OSECombatant } from "./module/combat/combatant";
 import TokenRulerOSE from "./module/actor/token-ruler";
-
 import logger from "./module/logger.js";
 import "./e2e";
 import polyfill from "./module/polyfill";
@@ -47,8 +44,6 @@ polyfill();
 
 Hooks.once("init", async () => {
   // Give modules a chance to add encumbrance schemes
-  // They can do so by adding their encumbrance schemes
-  // to CONFIG.OSE.encumbranceOptions
   Hooks.call("ose-setup-encumbrance");
 
   CONFIG.OSE = OSE;
@@ -172,7 +167,7 @@ Hooks.once("ready", async () => {
 });
 
 // Party sheet control
-Hooks.on("activateActorDirectory", party.addControl);
+Hooks.on("renderActorDirectory", party.addControl);
 
 /**
  * @param {Application} app
@@ -189,7 +184,6 @@ Hooks.on("renderSettings", async (app, html) => {
 
 Hooks.on("renderChatLog", (app, html) => OseItem.chatListeners(html));
 Hooks.on("getChatLogEntryContext", chat.addChatMessageContextOptions);
-Hooks.on("getChatMessageContextOptions", chat.addChatMessageContextOptions);
 Hooks.on("renderChatMessageHTML", chat.addChatMessageButtons);
 Hooks.on("renderRollTableSheet", treasure.augmentTable);
 Hooks.on("updateActor", party.update);
@@ -207,6 +201,6 @@ Hooks.on("createCombatant", (combatant) => {
 });
 
 Hooks.on("renderCompendium", renderList.RenderCompendium);
-Hooks.on("activateItemDirectory", renderList.RenderItemDirectory);
+Hooks.on("renderItemDirectory", renderList.RenderItemDirectory);
 
 Hooks.on("OSE.Party.showSheet", OsePartySheet.showPartySheet);

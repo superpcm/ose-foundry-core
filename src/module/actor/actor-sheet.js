@@ -22,7 +22,6 @@ export default class OseActorSheet extends foundry.applications.sheets.ActorShee
     const context = await super._prepareContext(options);
 
     // Add the actor's derived data model and essential properties.
-    // This is the core data available to all actor sheet templates.
     foundry.utils.mergeObject(context, {
       actor: this.actor,
       system: this.actor.system, // This is the derived data model
@@ -45,93 +44,87 @@ export default class OseActorSheet extends foundry.applications.sheets.ActorShee
     for (const i of context.items) {
       i.isExpanded = this._expanded.has(i.id);
     }
+    
+    // Allow subclasses to prepare their specific data.
+    this._prepareSheetData(context);
 
-    logger.debug(`Base context for ${this.actor.name}:`, context);
+    logger.debug(`Final context for ${this.actor.name}:`, context);
     return context;
+  }
+
+  /**
+   * A placeholder method for data preparation that is overridden by subclasses.
+   * @param {object} context    The context object to be enriched.
+   * @protected
+   */
+  _prepareSheetData(context) {
+    // This method is intended to be overridden by character-sheet.js and monster-sheet.js
   }
 
   async _renderHTML(options) {
     const context = await this._prepareContext(options);
-    const parts = {};
-
-    parts.header = await foundry.applications.handlebars.renderTemplate(
+    // Pre-render sheet header
+    context.header = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/partials/${this.actor.type}-header.html`,
       context
     );
-    parts.attributesTab = await foundry.applications.handlebars.renderTemplate(
+    // Pre-render attributes tab
+    context.attributesTab = await foundry.applications.handlebars.renderTemplate(
       `${OSE.systemPath()}/templates/actors/partials/${this.actor.type}-attributes-tab.html`,
       context
     );
-
+    // Character-specific tabs
     if (this.actor.type === "character") {
-      parts.abilitiesTab = await foundry.applications.handlebars.renderTemplate(
+      context.abilitiesTab = await foundry.applications.handlebars.renderTemplate(
         `${OSE.systemPath()}/templates/actors/partials/character-abilities-tab.html`,
         context
       );
-      parts.inventoryTab = await foundry.applications.handlebars.renderTemplate(
-        `${OSE.systemPath()}/templates/actors/partials/character-inventory-tab.html`,
-        context
-      );
-      parts.notesTab = await foundry.applications.handlebars.renderTemplate(
-        `${OSE.systemPath()}/templates/actors/partials/character-notes-tab.html`,
-        context
-      );
-      if (context.system.spells.enabled) {
-        parts.spellsTab = await foundry.applications.handlebars.renderTemplate(
+      if (context.config.spells.enabled) {
+        context.spellsTab = await foundry.applications.handlebars.renderTemplate(
           `${OSE.systemPath()}/templates/actors/partials/character-spells-tab.html`,
           context
         );
       }
-    } else { // Monster Sheet
-      if (context.system.config.enableInventory) {
-        parts.inventoryTab = await foundry.applications.handlebars.renderTemplate(
+      context.inventoryTab = await foundry.applications.handlebars.renderTemplate(
+        `${OSE.systemPath()}/templates/actors/partials/character-inventory-tab.html`,
+        context
+      );
+      context.notesTab = await foundry.applications.handlebars.renderTemplate(
+        `${OSE.systemPath()}/templates/actors/partials/character-notes-tab.html`,
+        context
+      );
+    }
+    // Monster-specific tabs
+    else {
+      if (context.config.spells.enabled) {
+        context.spellsTab = await foundry.applications.handlebars.renderTemplate(
+          `${OSE.systemPath()}/templates/actors/partials/monster-spells-tab.html`,
+          context
+        );
+      }
+      if (context.config.enableInventory) {
+        context.inventoryTab = await foundry.applications.handlebars.renderTemplate(
           `${OSE.systemPath()}/templates/actors/partials/character-inventory-tab.html`,
           context
         );
       }
-      if (context.system.spells.enabled) {
-        parts.spellsTab = await foundry.applications.handlebars.renderTemplate(
-          `${OSE.systemPath()}/templates/actors/partials/character-spells-tab.html`,
-          context
-        );
-      }
-      parts.notesTab = `<div class="inventory">
+      // Use enrichedBiography for notes
+      context.notesTab = `<div class="inventory">
         <div class="item-category-title">${game.i18n.localize("OSE.category.notes")}</div>
-        <div class="resizable-editor">
-          ${context.enrichedBiography}
-        </div>
+        <div class="resizable-editor">${context.enrichedBiography}</div>
       </div>`;
     }
-
-    const dom = new DocumentFragment();
-    const form = document.createElement("form");
-    form.className = this.options.classes.join(" ");
-    form.autocomplete = "off";
-    form.innerHTML = `
-      <header class="sheet-header flexrow">${parts.header}</header>
-      <nav class="sheet-tabs tabs" data-group="primary">
-        <a class="item" data-tab="attributes">${game.i18n.localize("OSE.category.attributes")}</a>
-        ${this.actor.type === 'character' ? `<a class="item" data-tab="abilities">${game.i18n.localize("OSE.category.abilities")}</a>` : ""}
-        ${context.system.spells.enabled ? `<a class="item" data-tab="spells">${game.i18n.localize("OSE.category.spells")}</a>` : ""}
-        ${(this.actor.type === 'character' || context.system.config.enableInventory) ? `<a class="item" data-tab="inventory">${game.i18n.localize("OSE.category.inventory")}</a>` : ""}
-        <a class="item" data-tab="notes">${game.i18n.localize("OSE.category.notes")}</a>
-      </nav>
-      <section class="sheet-body">
-        <div class="tab" data-group="primary" data-tab="attributes">${parts.attributesTab}</div>
-        ${this.actor.type === 'character' ? `<div class="tab" data-group="primary" data-tab="abilities">${parts.abilitiesTab}</div>` : ""}
-        ${context.system.spells.enabled ? `<div class="tab" data-group="primary" data-tab="spells">${parts.spellsTab}</div>` : ""}
-        ${(this.actor.type === 'character' || context.system.config.enableInventory) ? `<div class="tab" data-group="primary" data-tab="inventory">${parts.inventoryTab}</div>` : ""}
-        <div class="tab" data-group="primary" data-tab="notes">${parts.notesTab}</div>
-      </section>
-    `;
-    dom.append(form);
-    return dom;
+    // Render the overall sheet template with all parts
+    const html = await foundry.applications.handlebars.renderTemplate(
+      `${OSE.systemPath()}/templates/actors/actor-sheet.html`,
+      context
+    );
+    return document.createRange().createContextualFragment(html);
   }
   
   async _replaceHTML(element, options) {
-    const newContent = await this._renderHTML(options);
-    element.innerHTML = '';
-    element.append(...newContent.children);
+    const content = await this._renderHTML(options);
+    this.element.replaceChildren(content);
   }
   
   activateEditor(name, options, initialContent) {
@@ -178,6 +171,7 @@ export default class OseActorSheet extends foundry.applications.sheets.ActorShee
   _toggleItemSummary(event) {
     event.preventDefault();
     const item = event.currentTarget.closest(".item-entry.item");
+    if (!item) return;
     const itemSummary = item.querySelector(".item-summary");
     if (itemSummary.classList.contains("expanded")) {
       this._expanded.delete(item.dataset.itemId);
